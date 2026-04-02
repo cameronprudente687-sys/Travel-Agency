@@ -7,7 +7,7 @@ interface StatCardProps {
   subtitle?: string
   icon: LucideIcon
   trend?: { value: number; label: string }
-  color?: "navy" | "gold" | "green" | "amber" | "rose"
+  color?: "navy" | "gold" | "green" | "amber" | "rose" | "info"
   className?: string
 }
 
@@ -17,6 +17,7 @@ const colorMap = {
   green: { bg: "bg-green-50", icon: "bg-green-600 text-white", text: "text-green-700" },
   amber: { bg: "bg-amber-50", icon: "bg-amber-500 text-white", text: "text-amber-700" },
   rose: { bg: "bg-rose-50", icon: "bg-rose-500 text-white", text: "text-rose-700" },
+  info: { bg: "bg-blue-50", icon: "bg-blue-600 text-white", text: "text-blue-700" },
 }
 
 export function StatCard({ title, value, subtitle, icon: Icon, trend, color = "navy", className }: StatCardProps) {
