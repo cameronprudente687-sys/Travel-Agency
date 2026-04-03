@@ -2,6 +2,7 @@ import { db } from "@/lib/db"
 import { AdminHeader } from "@/components/layout/AdminHeader"
 import { Star, Clock, Calendar } from "lucide-react"
 import Link from "next/link"
+import { PastTripFormDialog } from "@/components/admin/PastTripFormDialog"
 
 export default async function PastTripsPage() {
   const trips = await db.pastTrip.findMany({
@@ -13,6 +14,9 @@ export default async function PastTripsPage() {
       <AdminHeader title="Past Trips" subtitle={`${trips.length} completed journeys`} />
 
       <div className="flex-1 p-6">
+        <div className="flex justify-end mb-6">
+          <PastTripFormDialog />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {trips.map(trip => (
             <Link

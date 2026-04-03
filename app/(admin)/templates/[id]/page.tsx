@@ -6,6 +6,7 @@ import { parseJsonField, formatCurrency } from "@/lib/utils"
 import { Clock, DollarSign, Map, Calendar, Star, ChevronRight } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { TemplateActions } from "@/components/admin/TemplateActions"
 
 export default async function TemplateDetailPage({ params }: { params: { id: string } }) {
   const template = await db.itineraryTemplate.findUnique({
@@ -34,6 +35,11 @@ export default async function TemplateDetailPage({ params }: { params: { id: str
       />
 
       <div className="flex-1 p-6 space-y-6">
+        {/* Actions */}
+        <div className="flex justify-end">
+          <TemplateActions template={template} />
+        </div>
+
         {/* Header Card */}
         <div className="bg-gradient-to-r from-primary-900 to-primary-700 rounded-xl text-white p-6">
           <div className="flex items-start justify-between">

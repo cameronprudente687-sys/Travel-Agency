@@ -4,6 +4,7 @@ import { AdminHeader } from "@/components/layout/AdminHeader"
 import { Badge } from "@/components/ui/badge"
 import { parseJsonField } from "@/lib/utils"
 import { Star, Globe, MapPin } from "lucide-react"
+import { PlaceActions } from "@/components/admin/PlaceActions"
 
 export default async function PlaceDetailPage({ params }: { params: { id: string } }) {
   const place = await db.savedPlace.findUnique({ where: { id: params.id } })
@@ -16,6 +17,9 @@ export default async function PlaceDetailPage({ params }: { params: { id: string
     <div className="flex flex-col min-h-full">
       <AdminHeader title={place.name} subtitle={`${place.destination}, ${place.country}`} />
       <div className="flex-1 p-6 max-w-2xl">
+        <div className="flex justify-end mb-4">
+          <PlaceActions place={place} />
+        </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
           <div className="flex items-start justify-between">
             <div>

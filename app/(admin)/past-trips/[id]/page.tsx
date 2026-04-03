@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { AdminHeader } from "@/components/layout/AdminHeader"
 import { parseJsonField } from "@/lib/utils"
 import { Star } from "lucide-react"
+import { PastTripActions } from "@/components/admin/PastTripActions"
 
 export default async function PastTripDetailPage({ params }: { params: { id: string } }) {
   const trip = await db.pastTrip.findUnique({ where: { id: params.id } })
@@ -14,6 +15,9 @@ export default async function PastTripDetailPage({ params }: { params: { id: str
     <div className="flex flex-col min-h-full">
       <AdminHeader title={trip.title} subtitle={`${trip.destination} · ${trip.tripDate}`} />
       <div className="flex-1 p-6 max-w-3xl">
+        <div className="flex justify-end mb-4">
+          <PastTripActions trip={trip} />
+        </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-6">
           <div className="flex items-center gap-4">
             <span className="text-5xl">{trip.flagEmoji}</span>

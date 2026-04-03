@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { parseJsonField } from "@/lib/utils"
 import Link from "next/link"
 import { Star } from "lucide-react"
+import { PlaceFormDialog } from "@/components/admin/PlaceFormDialog"
 
 const categoryEmoji: Record<string, string> = {
   HOTEL: "🏨", RESORT: "🌴", BOUTIQUE_HOTEL: "🏡", VILLA: "🏰",
@@ -28,6 +29,9 @@ export default async function PlacesPage() {
       <AdminHeader title="Saved Places" subtitle={`${places.length} curated hotels, restaurants & experiences`} />
 
       <div className="flex-1 p-6 space-y-6">
+        <div className="flex justify-end">
+          <PlaceFormDialog />
+        </div>
         {Object.entries(grouped).map(([dest, destPlaces]) => {
           const firstPlace = destPlaces[0]
           return (

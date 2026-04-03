@@ -4,6 +4,7 @@ import { AdminHeader } from "@/components/layout/AdminHeader"
 import { parseJsonField } from "@/lib/utils"
 import { Clock, DollarSign } from "lucide-react"
 import Link from "next/link"
+import { CollectionActions } from "@/components/admin/CollectionActions"
 
 export default async function CollectionDetailPage({ params }: { params: { id: string } }) {
   const collection = await db.tripCollection.findUnique({
@@ -26,6 +27,9 @@ export default async function CollectionDetailPage({ params }: { params: { id: s
       />
 
       <div className="flex-1 p-6">
+        <div className="flex justify-end mb-6">
+          <CollectionActions collection={collection} />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {collection.items.map(item => {
             const template = item.template

@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import "./globals.css"
 import { SessionProvider } from "@/components/providers/SessionProvider"
+import { Toaster } from "sonner"
 
 export const metadata: Metadata = {
   title: "Voyagr — Tailored Travel, Built Around the Traveler",
@@ -22,6 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <SessionProvider>{children}</SessionProvider>
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   )

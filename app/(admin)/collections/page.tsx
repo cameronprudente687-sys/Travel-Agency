@@ -1,6 +1,7 @@
 import { db } from "@/lib/db"
 import { AdminHeader } from "@/components/layout/AdminHeader"
 import Link from "next/link"
+import { CollectionFormDialog } from "@/components/admin/CollectionFormDialog"
 
 export default async function CollectionsPage() {
   const collections = await db.tripCollection.findMany({
@@ -20,6 +21,9 @@ export default async function CollectionsPage() {
       <AdminHeader title="Trip Collections" subtitle={`${collections.length} curated collections`} />
 
       <div className="flex-1 p-6">
+        <div className="flex justify-end mb-6">
+          <CollectionFormDialog />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {collections.map(col => (
             <Link

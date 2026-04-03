@@ -2,6 +2,7 @@ import { db } from "@/lib/db"
 import { AdminHeader } from "@/components/layout/AdminHeader"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
+import { DestinationFormDialog } from "@/components/admin/DestinationFormDialog"
 
 const categoryColors: Record<string, string> = {
   GENERAL: "secondary",
@@ -30,6 +31,9 @@ export default async function DestinationsPage() {
       <AdminHeader title="Destination Knowledge Base" subtitle={`${entries.length} knowledge entries across ${Object.keys(grouped).length} destinations`} />
 
       <div className="flex-1 p-6 space-y-6">
+        <div className="flex justify-end">
+          <DestinationFormDialog />
+        </div>
         {Object.entries(grouped).map(([destination, destEntries]) => {
           const firstEntry = destEntries[0]
           return (

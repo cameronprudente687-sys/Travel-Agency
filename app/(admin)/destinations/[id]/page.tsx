@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { AdminHeader } from "@/components/layout/AdminHeader"
 import { Badge } from "@/components/ui/badge"
 import { parseJsonField } from "@/lib/utils"
+import { DestinationActions } from "@/components/admin/DestinationActions"
 
 export default async function DestinationDetailPage({ params }: { params: { id: string } }) {
   const entry = await db.destinationKnowledgeEntry.findUnique({
@@ -18,6 +19,9 @@ export default async function DestinationDetailPage({ params }: { params: { id: 
     <div className="flex flex-col min-h-full">
       <AdminHeader title={entry.title} subtitle={`${entry.destination}, ${entry.country}`} />
       <div className="flex-1 p-6 max-w-3xl">
+        <div className="flex justify-end mb-4">
+          <DestinationActions entry={entry} />
+        </div>
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 space-y-5">
           <div className="flex items-center gap-3">
             <span className="text-3xl">{entry.flagEmoji}</span>
