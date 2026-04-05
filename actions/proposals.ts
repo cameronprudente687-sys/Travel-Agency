@@ -85,3 +85,59 @@ export async function publishToPortal(proposalId: string, leadId: string) {
   revalidatePath(`/proposals/${proposalId}`)
   revalidatePath("/proposals")
 }
+
+export async function generateProposalFromVersion(leadId: string, versionId: string, clientFirstName: string) {
+  const version = await db.tripVersion.findUnique({ where: { id: versionId } })
+  if (!version) throw new Error("Version not found")
+
+  const destinations = JSON.parse(version.destinations || "[]")
+  const itinerary = JSON.parse(version.itinerary || "[]")
+  const hotels = JSON.parse(version.hotelIdeas || "[]")
+  const experiences = JSON.parse(version.experiences || "[]")
+
+  const destText = destinations.join(" & ")
+  const daysCount = itinerary.length || version.durationDays
+
+  // Auto-generate intro
+  const introMessage = `Dear ${clientFirstName}, I'm excited to share your personalized ${destText} itinerary. This ${daysCount}-day journey has been designed around your preferences, pace, and travel style. Every detail — from the hotels to the experiences — has been chosen with your trip in mind.`
+
+  // Auto-generate summary from itinerary
+  const summaryParts = itinerary.slice(0, 4).map((d: any) => d.title || `Day ${d.day}`).join(", ")
+  const itinerarySummary = `${version.summary || ""}\n\nHighlights: ${summaryParts}${itinerary.length > 4 ? `, and ${itinerary.length - 4} more days of curated experiences.` : "."}`
+
+  // Build inclusions from version data
+  const inclusions: string[] = []
+  inclusions.push(`${daysCount} days / ${daysCount - 1} nights accommodation`)
+  if (hotels.length > 0) inclusions.push(`Curated hotels: ${hotels.map((h: any) => h.name).join(", ")}`)
+  if (experiences.length > 0) inclusions.push(`${experiences.length} curated experiences`)
+  inclusions.push("Detailed day-by-day itinerary")
+  inclusions.push("Restaurant recommendations")
+  inclusions.push("Dedicated trip support")
+
+  const exclusions = ["International flights", "Travel insurance", "Personal expenses", "Meals not specified"]
+
+  // Build pricing from version
+  const pricing: Record<string, string> = {}
+  if (version.estimatedCost) {
+    pricing.total_estimate = `$${version.estimatedCost.toLocaleString()}`
+  }
+
+  const proposal = await db.proposal.create({
+    data: {
+      leadId,
+      versionId,
+      title: version.title,
+      status: "DRAFT",
+      introMessage,
+      itinerarySummary: itinerarySummary.trim(),
+      pricing: JSON.stringify(pricing),
+      inclusions: JSON.stringify(inclusions),
+      exclusions: JSON.stringify(exclusions),
+      advisorSignOff: `This itinerary has been personally designed for you. I'm confident you'll love it. — Your Voyagr Advisor`,
+    },
+  })
+
+  revalidatePath(`/leads/${leadId}`)
+  revalidatePath("/proposals")
+  return proposal
+}

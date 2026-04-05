@@ -11,7 +11,8 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { VersionFormDialog } from "@/components/admin/VersionFormDialog"
+import { ItineraryBuilder } from "@/components/admin/ItineraryBuilder"
+import { VersionActions } from "@/components/admin/VersionActions"
 import { ProposalFormDialog } from "@/components/admin/ProposalFormDialog"
 import { VersionComparison } from "@/components/admin/VersionComparison"
 import { AddNoteForm } from "@/components/admin/AddNoteForm"
@@ -35,6 +36,14 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
   })
 
   const checklistTemplates = await db.checklistTemplate.findMany({ orderBy: { name: "asc" } })
+
+  // Fetch templates for itinerary builder start-from-template
+  const itineraryTemplates = await db.itineraryTemplate.findMany({
+    where: { status: "ACTIVE" },
+    orderBy: { isBestSeller: "desc" },
+    include: { days: { orderBy: { dayNumber: "asc" } } },
+    take: 12,
+  })
 
   if (!lead) notFound()
 
@@ -82,7 +91,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
               </div>
             </div>
             <div className="flex gap-2 flex-wrap">
-              <VersionFormDialog leadId={lead.id} />
+              <ItineraryBuilder leadId={lead.id} templates={itineraryTemplates} />
               <ProposalFormDialog leadId={lead.id} versions={versionOptions} />
               {lead.portalPage && (
                 <Button asChild variant="outline" size="sm">
@@ -313,39 +322,73 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
           <TabsContent value="versions" className="mt-4">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <VersionFormDialog leadId={lead.id} />
+                <ItineraryBuilder leadId={lead.id} templates={itineraryTemplates} />
                 {lead.tripVersions.length >= 2 && (
                   <VersionComparison versions={lead.tripVersions} />
                 )}
               </div>
               {lead.tripVersions.map(version => {
                 const versionDests = parseJsonField<string[]>(version.destinations, [])
+                const itineraryDays = parseJsonField<any[]>(version.itinerary, [])
+                const versionHotels = parseJsonField<any[]>(version.hotelIdeas, [])
+                const versionExps = parseJsonField<any[]>(version.experiences, [])
+                const hasLinkedProposal = lead.proposals.some((p: any) => p.versionId === version.id)
                 return (
-                  <div key={version.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-gray-400">V{version.versionNumber}</span>
-                          <h3 className="font-semibold text-gray-900">{version.title}</h3>
-                          <span className={`text-xs rounded-full px-2 py-0.5 ${version.status === 'finalized' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                            {version.status}
-                          </span>
+                  <div key={version.id} className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs font-bold text-gray-400">V{version.versionNumber}</span>
+                            <h3 className="font-semibold text-gray-900">{version.title}</h3>
+                            <span className={`text-xs rounded-full px-2 py-0.5 ${version.status === 'finalized' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {version.status}
+                            </span>
+                            {hasLinkedProposal && <span className="text-xs bg-primary-100 text-primary-700 rounded-full px-2 py-0.5">Has Proposal</span>}
+                          </div>
+                          <p className="text-sm text-gray-600 mt-1">{version.summary}</p>
+                          <div className="flex flex-wrap gap-3 mt-2">
+                            {versionDests.map(d => (
+                              <span key={d} className="text-xs text-primary-700 bg-primary-50 rounded-full px-2 py-0.5">{d}</span>
+                            ))}
+                            <span className="text-xs text-gray-500">{version.durationDays} days</span>
+                            {versionHotels.length > 0 && <span className="text-xs text-gray-500">{versionHotels.length} hotels</span>}
+                            {versionExps.length > 0 && <span className="text-xs text-gray-500">{versionExps.length} experiences</span>}
+                            {version.estimatedCost && <span className="text-xs font-medium text-primary-700">{formatCurrency(version.estimatedCost)}</span>}
+                          </div>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">{version.summary}</p>
-                        <div className="flex flex-wrap gap-3 mt-2">
-                          {versionDests.map(d => (
-                            <span key={d} className="text-xs text-primary-700 bg-primary-50 rounded-full px-2 py-0.5">{d}</span>
-                          ))}
-                          <span className="text-xs text-gray-500">{version.durationDays} days</span>
-                          {version.estimatedCost && <span className="text-xs text-gray-500">{formatCurrency(version.estimatedCost)}</span>}
+                        <div className="flex flex-col gap-2 shrink-0">
+                          <ItineraryBuilder
+                            leadId={lead.id}
+                            version={version}
+                            templates={itineraryTemplates}
+                            trigger={<Button variant="outline" size="sm"><Edit className="w-4 h-4 mr-1" /> Edit</Button>}
+                          />
+                          <VersionActions
+                            version={version}
+                            leadId={lead.id}
+                            leadFirstName={lead.firstName}
+                            hasProposal={hasLinkedProposal}
+                          />
                         </div>
                       </div>
-                      <VersionFormDialog
-                        leadId={lead.id}
-                        version={version}
-                        trigger={<Button variant="outline" size="sm"><Edit className="w-4 h-4 mr-1" /> Edit</Button>}
-                      />
                     </div>
+                    {/* Day preview strip */}
+                    {itineraryDays.length > 0 && (
+                      <div className="px-5 pb-4">
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                          {itineraryDays.slice(0, 8).map((day: any, i: number) => (
+                            <div key={i} className="flex items-center gap-1.5 bg-gray-50 rounded-lg px-2.5 py-1.5 text-xs text-gray-600 whitespace-nowrap shrink-0">
+                              <span className="w-5 h-5 rounded-full bg-primary-700 text-white text-xs flex items-center justify-center font-bold">{day.day || i + 1}</span>
+                              {day.title || day.location || `Day ${i + 1}`}
+                            </div>
+                          ))}
+                          {itineraryDays.length > 8 && (
+                            <span className="text-xs text-gray-400 self-center">+{itineraryDays.length - 8} more</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -353,7 +396,8 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
                 <div className="bg-white rounded-xl border border-dashed border-gray-200 p-12 text-center">
                   <FileText className="w-8 h-8 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500 mb-3">No trip versions yet</p>
-                  <VersionFormDialog leadId={lead.id} />
+                  <p className="text-sm text-gray-400 mb-4">Build a visual itinerary with the builder above</p>
+                  <ItineraryBuilder leadId={lead.id} templates={itineraryTemplates} />
                 </div>
               )}
             </div>
