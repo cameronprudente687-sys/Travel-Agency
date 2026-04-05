@@ -48,7 +48,7 @@ Voyagr is a full-stack MVP for a boutique travel advisor business. It has three 
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS with custom premium theme
 - **UI Components:** shadcn/ui (Radix UI primitives)
-- **Database:** SQLite via Prisma ORM
+- **Database:** PostgreSQL via Prisma ORM (Neon for production)
 - **Authentication:** NextAuth.js with JWT
 - **Validation:** Zod
 - **Forms:** React Hook Form
@@ -58,32 +58,44 @@ Voyagr is a full-stack MVP for a boutique travel advisor business. It has three 
 
 ## Getting Started
 
-### Prerequisites
-- Node.js 18+
-- npm
+### Option A: Deploy to Vercel (Recommended)
 
-### Installation
+1. Create a free database at [neon.tech](https://neon.tech)
+2. Import this repo on [vercel.com](https://vercel.com/new)
+3. Add environment variables in Vercel:
+   - `DATABASE_URL` = your Neon connection string
+   - `NEXTAUTH_SECRET` = any strong random string
+   - `NEXTAUTH_URL` = your Vercel URL (e.g. https://voyagr.vercel.app)
+4. Deploy, then run seed: `npx prisma db push && npm run prisma:seed`
+
+### Option B: Local Development with PostgreSQL
+
+Prerequisites: Node.js 18+, a PostgreSQL database (free via [neon.tech](https://neon.tech))
 
 ```bash
-# Install dependencies
 npm install
-
-# Generate Prisma client
-npx prisma generate
-
-# Create database and push schema
+# Set DATABASE_URL in .env to your Postgres connection string
 npx prisma db push
-
-# Seed demo data
 npm run prisma:seed
+npm run dev
+```
 
-# Start development server
+### Option C: Local Development with SQLite
+
+```bash
+npm install
+bash scripts/use-sqlite.sh  # switches schema to SQLite
+echo 'DATABASE_URL="file:./dev.db"' > .env
+echo 'NEXTAUTH_SECRET="dev-secret"' >> .env
+echo 'NEXTAUTH_URL="http://localhost:3000"' >> .env
+npx prisma generate && npx prisma db push
+npm run prisma:seed
 npm run dev
 ```
 
 The app will be available at [http://localhost:3000](http://localhost:3000).
 
-### Quick Setup (All-in-One)
+### Quick Setup (All-in-One, requires DATABASE_URL set)
 
 ```bash
 npm install && npm run db:setup && npm run dev
@@ -187,9 +199,9 @@ The seed script creates realistic demo data including:
 ## Environment Variables
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://user:pass@host/db?sslmode=require"
 NEXTAUTH_SECRET="your-secret-key"
-NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_URL="https://your-app.vercel.app"  # or http://localhost:3000 for local
 ```
 
 ## License

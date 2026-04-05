@@ -7,6 +7,9 @@ async function main() {
   console.log('Seeding Voyagr database...')
 
   // Clear existing data
+  await prisma.checklistCompletion.deleteMany()
+  await prisma.checklistItem.deleteMany()
+  await prisma.checklistTemplate.deleteMany()
   await prisma.seasonalityNote.deleteMany()
   await prisma.tripCollectionItem.deleteMany()
   await prisma.templateDay.deleteMany()
