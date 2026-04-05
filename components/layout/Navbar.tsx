@@ -32,7 +32,7 @@ export function Navbar() {
               Stories
             </Link>
             <Link href="/login" className="text-sm text-gray-600 hover:text-primary-700 transition-colors">
-              Advisor Login
+              Sign In
             </Link>
             <Button asChild variant="gold" size="sm">
               <Link href="/survey">Plan My Trip</Link>
@@ -61,7 +61,7 @@ export function Navbar() {
               Stories
             </Link>
             <Link href="/login" className="block text-sm text-gray-600 py-1" onClick={() => setIsOpen(false)}>
-              Advisor Login
+              Sign In
             </Link>
             <Button asChild variant="gold" className="w-full">
               <Link href="/survey" onClick={() => setIsOpen(false)}>Plan My Trip</Link>

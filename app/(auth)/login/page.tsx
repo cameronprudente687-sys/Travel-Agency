@@ -54,6 +54,7 @@ export default function LoginPage() {
             </div>
             <h1 className="text-2xl font-serif font-bold text-primary-900">Welcome to Voyagr</h1>
             <p className="text-sm text-gray-500 mt-1">Sign in to access your account</p>
+            <p className="text-xs text-gray-400 mt-2">Advisors access the dashboard. Travelers access their trip portal.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
