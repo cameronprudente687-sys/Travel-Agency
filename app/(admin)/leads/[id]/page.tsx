@@ -38,6 +38,11 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
 
   if (!lead) notFound()
 
+  // Fetch customer account linked to this lead
+  const customerAccount = await db.user.findFirst({
+    where: { leadId: lead.id, role: "CLIENT" },
+  })
+
   const survey = lead.survey
   const aiSummary = lead.summary
   const destinations = parseJsonField<string[]>(survey?.destinationsList, [])
@@ -423,6 +428,9 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
               <PortalControls
                 portal={lead.portalPage}
                 leadId={lead.id}
+                leadEmail={lead.email}
+                leadFirstName={lead.firstName}
+                customerAccount={customerAccount ? { id: customerAccount.id, email: customerAccount.email, name: customerAccount.name, createdAt: customerAccount.createdAt.toISOString() } : null}
                 checklistItems={lead.portalPage.checklistItems}
                 checklistTemplates={checklistTemplates}
               />

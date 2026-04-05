@@ -6,20 +6,23 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { publishPortal, unpublishPortal, updatePortalMessage, updatePortalDates, createCustomerAccount } from "@/actions/portal"
+import { publishPortal, unpublishPortal, updatePortalMessage, createCustomerAccount } from "@/actions/portal"
 import { generateChecklistFromItinerary, createChecklistItem, deleteChecklistItem, applyChecklistTemplate } from "@/actions/checklist"
-import { Globe, GlobeLock, UserPlus, Plus, Trash2, ListChecks, Wand2 } from "lucide-react"
+import { Globe, GlobeLock, UserPlus, Plus, Trash2, ListChecks, Wand2, Copy, CheckCircle, User, Mail, KeyRound } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 
 interface Props {
   portal: any
   leadId: string
+  leadEmail: string
+  leadFirstName: string
+  customerAccount: { id: string; email: string; name: string; createdAt: string } | null
   checklistItems?: any[]
   checklistTemplates?: any[]
 }
 
-export function PortalControls({ portal, leadId, checklistItems = [], checklistTemplates = [] }: Props) {
+export function PortalControls({ portal, leadId, leadEmail, leadFirstName, customerAccount, checklistItems = [], checklistTemplates = [] }: Props) {
   const [isPending, startTransition] = useTransition()
 
   const handlePublish = () => {
@@ -41,17 +44,6 @@ export function PortalControls({ portal, leadId, checklistItems = [], checklistT
     })
   }
 
-  const handleCreateAccount = () => {
-    startTransition(async () => {
-      try {
-        const result = await createCustomerAccount(leadId) as any
-        toast.success(`Customer account created! Temp password: ${result.tempPassword}`)
-      } catch (e: any) {
-        toast.error(e.message || "Failed to create account")
-      }
-    })
-  }
-
   const handleGenerateChecklist = () => {
     startTransition(async () => {
       try {
@@ -65,7 +57,7 @@ export function PortalControls({ portal, leadId, checklistItems = [], checklistT
     <div className="space-y-4">
       {/* Portal Status & Publish Controls */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Portal Controls</h3>
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Portal Status</h3>
 
         <div className="flex items-center gap-3 mb-4">
           <span className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1 rounded-full ${
@@ -93,11 +85,17 @@ export function PortalControls({ portal, leadId, checklistItems = [], checklistT
               <GlobeLock className="w-4 h-4 mr-1" /> Unpublish
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={handleCreateAccount} disabled={isPending}>
-            <UserPlus className="w-4 h-4 mr-1" /> Create Customer Login
-          </Button>
         </div>
       </div>
+
+      {/* Customer Access — the key new section */}
+      <CustomerAccessSection
+        leadId={leadId}
+        leadEmail={leadEmail}
+        leadFirstName={leadFirstName}
+        customerAccount={customerAccount}
+        portalPublished={portal.portalStatus === "PUBLISHED"}
+      />
 
       {/* Advisor Message */}
       <AdvisorMessageEditor portalId={portal.id} currentMessage={portal.advisorMessage || ""} />
@@ -114,14 +112,12 @@ export function PortalControls({ portal, leadId, checklistItems = [], checklistT
           </div>
         </div>
 
-        {/* Checklist template selector */}
         {checklistTemplates.length > 0 && (
           <div className="mb-4">
             <ApplyTemplateSelector portalId={portal.id} templates={checklistTemplates} />
           </div>
         )}
 
-        {/* Existing items */}
         <div className="space-y-2">
           {checklistItems.map((item: any) => (
             <ChecklistItemRow key={item.id} item={item} />
@@ -134,6 +130,149 @@ export function PortalControls({ portal, leadId, checklistItems = [], checklistT
     </div>
   )
 }
+
+// ==================== CUSTOMER ACCESS SECTION ====================
+
+function CustomerAccessSection({
+  leadId, leadEmail, leadFirstName, customerAccount, portalPublished,
+}: {
+  leadId: string
+  leadEmail: string
+  leadFirstName: string
+  customerAccount: Props["customerAccount"]
+  portalPublished: boolean
+}) {
+  const [isPending, startTransition] = useTransition()
+  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null)
+  const [copied, setCopied] = useState<string | null>(null)
+
+  const handleCreateAccount = () => {
+    startTransition(async () => {
+      try {
+        const result = await createCustomerAccount(leadId) as any
+        if (result.tempPassword) {
+          setCredentials({ email: leadEmail, password: result.tempPassword })
+          toast.success("Customer login created")
+        } else {
+          toast.success("Account already exists")
+        }
+      } catch (e: any) {
+        toast.error(e.message || "Failed to create account")
+      }
+    })
+  }
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text)
+    setCopied(label)
+    toast.success(`${label} copied`)
+    setTimeout(() => setCopied(null), 2000)
+  }
+
+  const hasAccount = !!customerAccount
+  const expectedPassword = `${leadFirstName.toLowerCase()}2025`
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Customer Access</h3>
+
+      {!hasAccount && !credentials ? (
+        // No account yet
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+              <User className="w-5 h-5 text-gray-400" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700">No customer login yet</p>
+              <p className="text-xs text-gray-400">Create a login so {leadFirstName} can view their trip portal.</p>
+            </div>
+          </div>
+          {!portalPublished && (
+            <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 mb-3">
+              Tip: Publish the portal first, then create the customer login.
+            </p>
+          )}
+          <Button variant="navy" size="sm" onClick={handleCreateAccount} disabled={isPending}>
+            <UserPlus className="w-4 h-4 mr-1" />
+            {isPending ? "Creating..." : "Create Customer Login"}
+          </Button>
+        </div>
+      ) : (
+        // Account exists or just created
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-700">Customer login active</p>
+              {customerAccount && (
+                <p className="text-xs text-gray-400">
+                  Created {new Date(customerAccount.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Credentials display */}
+          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Login Credentials</p>
+
+            <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className="text-sm text-gray-800 truncate">{customerAccount?.email || leadEmail}</span>
+              </div>
+              <button
+                onClick={() => copyToClipboard(customerAccount?.email || leadEmail, "Email")}
+                className="text-primary-600 hover:text-primary-800 shrink-0 ml-2"
+              >
+                {copied === "Email" ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2.5">
+              <div className="flex items-center gap-2 min-w-0">
+                <KeyRound className="w-4 h-4 text-gray-400 shrink-0" />
+                <span className="text-sm text-gray-800 font-mono">
+                  {credentials?.password || expectedPassword}
+                </span>
+              </div>
+              <button
+                onClick={() => copyToClipboard(credentials?.password || expectedPassword, "Password")}
+                className="text-primary-600 hover:text-primary-800 shrink-0 ml-2"
+              >
+                {copied === "Password" ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-400">
+              Share these credentials with {leadFirstName} so they can sign in at /login and view their trip.
+            </p>
+          </div>
+
+          {/* Copy all button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-3"
+            onClick={() => {
+              const email = customerAccount?.email || leadEmail
+              const pw = credentials?.password || expectedPassword
+              copyToClipboard(`Email: ${email}\nPassword: ${pw}`, "Credentials")
+            }}
+          >
+            <Copy className="w-4 h-4 mr-1" />
+            {copied === "Credentials" ? "Copied!" : "Copy All Credentials"}
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ==================== ADVISOR MESSAGE ====================
 
 function AdvisorMessageEditor({ portalId, currentMessage }: { portalId: string; currentMessage: string }) {
   const [msg, setMsg] = useState(currentMessage)
@@ -158,6 +297,8 @@ function AdvisorMessageEditor({ portalId, currentMessage }: { portalId: string; 
     </div>
   )
 }
+
+// ==================== CHECKLIST MANAGEMENT ====================
 
 function AddChecklistItemDialog({ portalId }: { portalId: string }) {
   const [open, setOpen] = useState(false)
@@ -233,10 +374,7 @@ function ChecklistItemRow({ item }: { item: any }) {
   }
 
   const categoryLabel: Record<string, string> = {
-    PRE_TRIP: "Pre-Trip",
-    DURING_TRIP: "During",
-    DAY_ACTIVITY: "Day",
-    POST_TRIP: "Post",
+    PRE_TRIP: "Pre-Trip", DURING_TRIP: "During", DAY_ACTIVITY: "Day", POST_TRIP: "Post",
   }
 
   return (
@@ -274,7 +412,7 @@ function ApplyTemplateSelector({ portalId, templates }: { portalId: string; temp
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 flex-wrap">
       <span className="text-xs text-gray-500">Apply template:</span>
       {templates.map(t => (
         <button
