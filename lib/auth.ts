@@ -12,21 +12,14 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
-        }
+        if (!credentials?.email || !credentials?.password) return null
 
         const user = await db.user.findUnique({
           where: { email: credentials.email },
         })
-
         if (!user) return null
 
-        const passwordMatch = await bcrypt.compare(
-          credentials.password,
-          user.password
-        )
-
+        const passwordMatch = await bcrypt.compare(credentials.password, user.password)
         if (!passwordMatch) return null
 
         return {
@@ -34,6 +27,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           name: user.name,
           role: user.role,
+          leadId: user.leadId,
         }
       },
     }),
@@ -43,6 +37,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.role = (user as any).role
         token.id = user.id
+        token.leadId = (user as any).leadId
       }
       return token
     },
@@ -50,6 +45,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         (session.user as any).role = token.role
         ;(session.user as any).id = token.id
+        ;(session.user as any).leadId = token.leadId
       }
       return session
     },

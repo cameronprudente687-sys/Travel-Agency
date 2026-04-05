@@ -15,6 +15,7 @@ import { VersionFormDialog } from "@/components/admin/VersionFormDialog"
 import { ProposalFormDialog } from "@/components/admin/ProposalFormDialog"
 import { VersionComparison } from "@/components/admin/VersionComparison"
 import { AddNoteForm } from "@/components/admin/AddNoteForm"
+import { PortalControls } from "@/components/admin/PortalControls"
 
 export default async function LeadDetailPage({ params }: { params: { id: string } }) {
   const lead = await db.customerLead.findUnique({
@@ -25,9 +26,15 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
       tripVersions: { orderBy: { versionNumber: "asc" } },
       proposals: { orderBy: { createdAt: "desc" } },
       leadNotes: { orderBy: { createdAt: "desc" } },
-      portalPage: true,
+      portalPage: {
+        include: {
+          checklistItems: { orderBy: [{ category: "asc" }, { sortOrder: "asc" }] },
+        },
+      },
     },
   })
+
+  const checklistTemplates = await db.checklistTemplate.findMany({ orderBy: { name: "asc" } })
 
   if (!lead) notFound()
 
@@ -131,6 +138,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             <TabsTrigger value="versions">Versions ({lead.tripVersions.length})</TabsTrigger>
             <TabsTrigger value="proposals">Proposals ({lead.proposals.length})</TabsTrigger>
             <TabsTrigger value="notes">Notes ({lead.leadNotes.length})</TabsTrigger>
+            {lead.portalPage && <TabsTrigger value="portal">Portal</TabsTrigger>}
           </TabsList>
 
           {/* Overview Tab */}
@@ -408,6 +416,18 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
               <AddNoteForm leadId={lead.id} />
             </div>
           </TabsContent>
+
+          {/* Portal Tab */}
+          {lead.portalPage && (
+            <TabsContent value="portal" className="mt-4">
+              <PortalControls
+                portal={lead.portalPage}
+                leadId={lead.id}
+                checklistItems={lead.portalPage.checklistItems}
+                checklistTemplates={checklistTemplates}
+              />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

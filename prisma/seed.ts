@@ -900,8 +900,155 @@ async function main() {
   }
   console.log(`Created ${pricingEstimates.length} pricing estimates`)
 
+  // ==================== CUSTOMER ACCOUNTS ====================
+  const customerPassword = await bcrypt.hash('emily2025', 12)
+  const customers = [
+    { email: 'emily.watson@example.com', name: 'Emily Watson', leadId: leads[0].id, password: customerPassword },
+    { email: 'jessica.martinez@example.com', name: 'Jessica Martinez', leadId: leads[4].id, password: await bcrypt.hash('jessica2025', 12) },
+    { email: 'robert.taylor@example.com', name: 'Robert Taylor', leadId: leads[5].id, password: await bcrypt.hash('robert2025', 12) },
+    { email: 'amanda.brown@example.com', name: 'Amanda Brown', leadId: leads[6].id, password: await bcrypt.hash('amanda2025', 12) },
+    { email: 'james.wilson@example.com', name: 'James Wilson', leadId: leads[7].id, password: await bcrypt.hash('james2025', 12) },
+  ]
+  for (const c of customers) {
+    await prisma.user.create({ data: { ...c, role: 'CLIENT' } })
+  }
+  console.log('Created customer accounts')
+
+  // ==================== PUBLISH PORTAL PAGES ====================
+  // Update existing portal pages to PUBLISHED status
+  await prisma.clientPortalPage.updateMany({
+    data: { portalStatus: 'PUBLISHED', publishedAt: new Date(), advisorMessage: 'I\'ve put this trip together personally for you. Take your time reviewing everything, and don\'t hesitate to reach out with questions or changes. This is your trip — we\'ll make it perfect.' },
+  })
+  console.log('Published portal pages')
+
+  // ==================== CHECKLIST TEMPLATES ====================
+  const clTemplates = [
+    {
+      name: 'International Trip Prep',
+      description: 'Standard pre-trip checklist for international travel',
+      category: 'PRE_TRIP',
+      isDefault: true,
+      items: JSON.stringify([
+        { title: 'Passport valid for 6+ months', category: 'PRE_TRIP' },
+        { title: 'Visa requirements checked', category: 'PRE_TRIP' },
+        { title: 'Travel insurance purchased', category: 'PRE_TRIP' },
+        { title: 'Flights booked and confirmed', category: 'PRE_TRIP' },
+        { title: 'Hotels booked and confirmed', category: 'PRE_TRIP' },
+        { title: 'Credit card company notified of travel', category: 'PRE_TRIP' },
+        { title: 'Phone international plan activated', category: 'PRE_TRIP' },
+        { title: 'Copies of documents saved digitally', category: 'PRE_TRIP' },
+        { title: 'Packing complete', category: 'PRE_TRIP' },
+        { title: 'Home preparations done (mail, plants, etc.)', category: 'PRE_TRIP' },
+      ]),
+    },
+    {
+      name: 'Honeymoon Travel Prep',
+      description: 'Pre-trip checklist for honeymoon couples',
+      category: 'PRE_TRIP',
+      items: JSON.stringify([
+        { title: 'Passports valid and name changes processed', category: 'PRE_TRIP' },
+        { title: 'Travel insurance for both travelers', category: 'PRE_TRIP' },
+        { title: 'Special occasion noted with hotel', category: 'PRE_TRIP' },
+        { title: 'Restaurant reservations confirmed', category: 'PRE_TRIP' },
+        { title: 'Spa bookings confirmed', category: 'PRE_TRIP' },
+        { title: 'Wedding ring insurance', category: 'PRE_TRIP' },
+        { title: 'Out-of-office replies set', category: 'PRE_TRIP' },
+        { title: 'Currency / payment cards ready', category: 'PRE_TRIP' },
+      ]),
+    },
+    {
+      name: 'Europe City Trip',
+      description: 'Checklist for European city-hopping trips',
+      category: 'PRE_TRIP',
+      items: JSON.stringify([
+        { title: 'EU entry requirements verified', category: 'PRE_TRIP' },
+        { title: 'Train tickets / passes purchased', category: 'PRE_TRIP' },
+        { title: 'Museum reservations booked', category: 'PRE_TRIP' },
+        { title: 'Walking shoes packed', category: 'PRE_TRIP' },
+        { title: 'Power adapter packed (EU type)', category: 'PRE_TRIP' },
+        { title: 'Offline maps downloaded', category: 'PRE_TRIP' },
+        { title: 'Restaurant reservations confirmed', category: 'PRE_TRIP' },
+      ]),
+    },
+    {
+      name: 'Family Travel Prep',
+      description: 'Pre-trip checklist for traveling with children',
+      category: 'PRE_TRIP',
+      items: JSON.stringify([
+        { title: 'All passports valid', category: 'PRE_TRIP' },
+        { title: 'Child travel consent letters (if needed)', category: 'PRE_TRIP' },
+        { title: 'Kids activities and entertainment packed', category: 'PRE_TRIP' },
+        { title: 'Snacks and comfort items ready', category: 'PRE_TRIP' },
+        { title: 'Family travel insurance confirmed', category: 'PRE_TRIP' },
+        { title: 'Child-friendly restaurants researched', category: 'PRE_TRIP' },
+        { title: 'Car seats / strollers arranged', category: 'PRE_TRIP' },
+      ]),
+    },
+  ]
+  for (const t of clTemplates) {
+    await prisma.checklistTemplate.create({ data: t })
+  }
+  console.log('Created checklist templates')
+
+  // ==================== CHECKLIST ITEMS FOR DEMO PORTALS ====================
+  const allPortals = await prisma.clientPortalPage.findMany()
+  for (const portal of allPortals) {
+    // Pre-trip items
+    const preTripItems = [
+      { title: 'Passport verified and valid', category: 'PRE_TRIP', sortOrder: 0 },
+      { title: 'Travel insurance purchased', category: 'PRE_TRIP', sortOrder: 1 },
+      { title: 'Flights confirmed', category: 'PRE_TRIP', sortOrder: 2 },
+      { title: 'Hotels confirmed', category: 'PRE_TRIP', sortOrder: 3 },
+      { title: 'Packing complete', category: 'PRE_TRIP', sortOrder: 4 },
+    ]
+    for (const item of preTripItems) {
+      await prisma.checklistItem.create({
+        data: { ...item, portalId: portal.id, isCustomerVisible: true },
+      })
+    }
+
+    // Day activity items (sample)
+    const dayItems = [
+      { title: 'Airport transfer', category: 'DAY_ACTIVITY', dayNumber: 1, sortOrder: 10 },
+      { title: 'Hotel check-in', category: 'DAY_ACTIVITY', dayNumber: 1, sortOrder: 11 },
+      { title: 'Welcome dinner', category: 'DAY_ACTIVITY', dayNumber: 1, sortOrder: 12 },
+      { title: 'Morning guided tour', category: 'DAY_ACTIVITY', dayNumber: 2, sortOrder: 13 },
+      { title: 'Lunch reservation', category: 'DAY_ACTIVITY', dayNumber: 2, sortOrder: 14 },
+      { title: 'Afternoon exploration', category: 'DAY_ACTIVITY', dayNumber: 2, sortOrder: 15 },
+      { title: 'Special experience', category: 'DAY_ACTIVITY', dayNumber: 3, sortOrder: 16 },
+    ]
+    for (const item of dayItems) {
+      await prisma.checklistItem.create({
+        data: { ...item, portalId: portal.id, isCustomerVisible: true },
+      })
+    }
+  }
+
+  // Mark some items as completed for first portal (Emily's)
+  const emilyUser = await prisma.user.findFirst({ where: { email: 'emily.watson@example.com' } })
+  const emilyPortal = allPortals[0]
+  if (emilyUser && emilyPortal) {
+    const emilyItems = await prisma.checklistItem.findMany({
+      where: { portalId: emilyPortal.id },
+      orderBy: { sortOrder: 'asc' },
+      take: 5,
+    })
+    for (const item of emilyItems.slice(0, 3)) {
+      await prisma.checklistCompletion.create({
+        data: { itemId: item.id, userId: emilyUser.id, completed: true },
+      })
+    }
+  }
+  console.log('Created checklist items with demo completions')
+
   console.log('\n✅ Seed complete! Database populated with demo data.')
   console.log('Admin login: admin@voyagr.com / voyagr2024')
+  console.log('Customer logins:')
+  console.log('  emily.watson@example.com / emily2025')
+  console.log('  jessica.martinez@example.com / jessica2025')
+  console.log('  robert.taylor@example.com / robert2025')
+  console.log('  amanda.brown@example.com / amanda2025')
+  console.log('  james.wilson@example.com / james2025')
 }
 
 main()

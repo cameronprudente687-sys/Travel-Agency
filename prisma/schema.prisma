@@ -19,18 +19,22 @@ datasource db {
 // KnowledgeCategory: GENERAL | BEST_TIME_TO_VISIT | NEIGHBORHOODS | TRANSPORTATION | FOOD_CULTURE | HIDDEN_GEMS | LUXURY_TIPS | FAMILY_TIPS | ROMANCE_TIPS | ADVENTURE_TIPS
 // ProposalStatus: DRAFT | SENT | VIEWED | ACCEPTED | DECLINED | REVISED
 // TemplateStatus: ACTIVE | DRAFT | ARCHIVED
-// PersonalExperienceState: NEVER_BEEN | BEEN_ONCE | BEEN_MULTIPLE | LIVED_THERE
+// PortalStatus: DRAFT | PUBLISHED | UNPUBLISHED
+// ChecklistCategory: PRE_TRIP | DURING_TRIP | POST_TRIP | DAY_ACTIVITY
 
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String
-  role      String   @default("ADVISOR") // UserRole
+  role      String   @default("ADVISOR") // UserRole: ADMIN | ADVISOR | CLIENT
   password  String
   avatar    String?
   bio       String?
+  leadId    String?  @unique // Links CLIENT users to their CustomerLead
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  checklistCompletions ChecklistCompletion[]
 
   @@map("users")
 }
@@ -63,58 +67,38 @@ model TripSurvey {
   leadId   String @unique
   lead     CustomerLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
-  // Section A - Traveler Info
-  travelerType       String? // TravelerType
+  travelerType       String?
   groupSize          Int?
-  childrenAges       String? // JSON array
-
-  // Section B - Trip Basics
+  childrenAges       String?
   tripDurationMin    Int?
   tripDurationMax    Int?
   tripYear           Int?
-  tripMonths         String? // JSON array of months
-  budget             String? // BudgetRange
+  tripMonths         String?
+  budget             String?
   budgetFlexible     Boolean @default(false)
-
-  // Section C - Destinations
   destinationsKnown  Boolean @default(false)
-  destinationsList   String? // JSON array
-  destinationOpenTo  String? // JSON array of regions
+  destinationsList   String?
+  destinationOpenTo  String?
   openToSuggestions  Boolean @default(true)
-
-  // Section D - Travel Style
-  travelStyles       String? // JSON array of TravelStyle
-  pacePreference     String? // "slow" | "moderate" | "fast"
-  accommodationType  String? // JSON array
-
-  // Section E - Interests & Activities
-  interests          String? // JSON array
-  mustHaveExperiences String? // free text
-  avoidExperiences   String? // free text
-
-  // Section F - Food & Dining
-  diningImportance   Int?    // 1-10
-  dietaryRestrictions String? // JSON array
-  diningStyle        String? // "local" | "upscale" | "mix"
-
-  // Section G - Previous Travel
-  countriesVisited   String? // JSON array
+  travelStyles       String?
+  pacePreference     String?
+  accommodationType  String?
+  interests          String?
+  mustHaveExperiences String?
+  avoidExperiences   String?
+  diningImportance   Int?
+  dietaryRestrictions String?
+  diningStyle        String?
+  countriesVisited   String?
   favoriteTrip       String?
   worstTripAspect    String?
-
-  // Section H - Special Requests
   celebrationDetails String?
   accessibilityNeeds String?
   otherRequests      String?
-
-  // Section I - Planning Preferences
-  planningInvolvement String? // "hands_off" | "collaborative" | "hands_on"
-  communicationPref  String? // "email" | "phone" | "video"
-
-  // Section J - Trip Feeling
-  tripFeeling        String? // what they want to feel
-  oneWord            String? // one word for trip
-
+  planningInvolvement String?
+  communicationPref  String?
+  tripFeeling        String?
+  oneWord            String?
   submittedAt DateTime @default(now())
 
   @@map("trip_surveys")
@@ -127,16 +111,15 @@ model GeneratedTravelerSummary {
 
   travelerSummary        String
   idealTripStyle         String
-  bestFitDestinations    String // JSON array with reasoning
+  bestFitDestinations    String
   pacingRecommendation   String
   routeSuggestion        String?
   hotelStyle             String
   diningFocus            String
-  activitiesRecommended  String // JSON array
-  avoidPatterns          String // JSON array
+  activitiesRecommended  String
+  avoidPatterns          String
   advisorNotes           String
-  matchingTemplates      String // JSON array with scores
-
+  matchingTemplates      String
   generatedAt DateTime @default(now())
 
   @@map("generated_traveler_summaries")
@@ -146,7 +129,6 @@ model LeadNote {
   id        String @id @default(cuid())
   leadId    String
   lead      CustomerLead @relation(fields: [leadId], references: [id], onDelete: Cascade)
-
   content   String
   author    String
   createdAt DateTime @default(now())
@@ -162,14 +144,14 @@ model TripVersion {
   versionNumber  Int
   title          String
   summary        String
-  destinations   String // JSON array
+  destinations   String
   durationDays   Int
   estimatedCost  Float?
-  itinerary      String // JSON - day by day
-  hotelIdeas     String // JSON array
-  experiences    String // JSON array
+  itinerary      String
+  hotelIdeas     String
+  experiences    String
   notes          String?
-  status         String @default("draft") // draft | finalized
+  status         String @default("draft")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -191,9 +173,9 @@ model Proposal {
 
   introMessage  String
   itinerarySummary String
-  pricing       String // JSON
-  inclusions    String // JSON array
-  exclusions    String // JSON array
+  pricing       String
+  inclusions    String
+  exclusions    String
   termsNotes    String?
   advisorSignOff String?
 
@@ -220,15 +202,81 @@ model ClientPortalPage {
   title      String
   isActive   Boolean @default(true)
 
+  // Publishing
+  portalStatus   String  @default("DRAFT") // DRAFT | PUBLISHED | UNPUBLISHED
+  publishedAt    DateTime?
+  visibleSections String? // JSON array of section names shown to customer
+
+  // Travel dates for progress tracking
+  travelStartDate DateTime?
+  travelEndDate   DateTime?
+
   heroImageUrl   String?
   welcomeMessage String
   tripHighlights String // JSON array
+  advisorMessage String? // personal message from advisor
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  checklistItems ChecklistItem[]
+
   @@map("client_portal_pages")
 }
+
+// ==================== CHECKLIST SYSTEM ====================
+
+model ChecklistTemplate {
+  id          String @id @default(cuid())
+  name        String // e.g. "International Trip Prep", "Honeymoon Travel Prep"
+  description String?
+  category    String // PRE_TRIP | DURING_TRIP | general
+  items       String // JSON array of { title, description, category, dayNumber? }
+  isDefault   Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("checklist_templates")
+}
+
+model ChecklistItem {
+  id          String @id @default(cuid())
+  portalId    String
+  portal      ClientPortalPage @relation(fields: [portalId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  category    String  @default("PRE_TRIP") // PRE_TRIP | DURING_TRIP | POST_TRIP | DAY_ACTIVITY
+  dayNumber   Int?    // which itinerary day this belongs to (null = general)
+  sortOrder   Int     @default(0)
+
+  isCustomerVisible Boolean @default(true)
+  isRequired        Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  completions ChecklistCompletion[]
+
+  @@map("checklist_items")
+}
+
+model ChecklistCompletion {
+  id          String @id @default(cuid())
+  itemId      String
+  item        ChecklistItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  completed   Boolean @default(true)
+  notes       String?
+  completedAt DateTime @default(now())
+
+  @@unique([itemId, userId])
+  @@map("checklist_completions")
+}
+
+// ==================== EXISTING MODELS (UNCHANGED) ====================
 
 model ItineraryTemplate {
   id          String @id @default(cuid())
@@ -237,37 +285,28 @@ model ItineraryTemplate {
   country     String
   region      String?
   flagEmoji   String?
-
   summary     String
   description String
-
   durationDays    Int
-  travelStyles    String // JSON array
-  travelerTypes   String // JSON array
-  budgetLevel     String // BudgetRange
-  paceLevel       String // slow | moderate | fast
-
-  tags            String? // JSON array: "signature", "bestseller", "romantic", etc.
-  status          String @default("ACTIVE") // TemplateStatus
+  travelStyles    String
+  travelerTypes   String
+  budgetLevel     String
+  paceLevel       String
+  tags            String?
+  status          String @default("ACTIVE")
   isFeatured      Boolean @default(false)
   isBestSeller    Boolean @default(false)
   isSignature     Boolean @default(false)
-
   imageUrl        String?
   mapImageUrl     String?
-
-  bestMonths      String? // JSON array of month numbers
-
-  highlights      String // JSON array
-  includes        String // JSON array
-  excludes        String? // JSON array
-
+  bestMonths      String?
+  highlights      String
+  includes        String
+  excludes        String?
   basePrice       Float?
   priceNotes      String?
-
   days            TemplateDay[]
   collections     TripCollectionItem[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -278,13 +317,12 @@ model TemplateDay {
   id          String @id @default(cuid())
   templateId  String
   template    ItineraryTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-
   dayNumber   Int
   title       String
   location    String
   description String
-  activities  String // JSON array
-  meals       String? // JSON array
+  activities  String
+  meals       String?
   accommodation String?
   transportNotes String?
   tips        String?
@@ -298,27 +336,19 @@ model PastTrip {
   destination String
   country     String
   flagEmoji   String?
-
-  clientName  String // anonymized or first name only
-  tripDate    String // e.g., "March 2024"
+  clientName  String
+  tripDate    String
   durationDays Int
-
   summary     String
-  highlights  String // JSON array
-
+  highlights  String
   travelStyle String
   travelerType String
   budgetLevel String
-
   testimonial String?
-  rating      Int?    // 1-5
-
+  rating      Int?
   imageUrl    String?
-
   advisorNotes String?
-
   templateId  String?
-
   createdAt DateTime @default(now())
 
   @@map("past_trips")
@@ -332,9 +362,7 @@ model TripCollection {
   emoji       String?
   isPublic    Boolean @default(true)
   sortOrder   Int @default(0)
-
   items       TripCollectionItem[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -359,17 +387,13 @@ model DestinationKnowledgeEntry {
   country     String
   region      String?
   flagEmoji   String?
-
-  category    String // KnowledgeCategory
+  category    String
   title       String
   content     String
-
-  tags        String? // JSON array
+  tags        String?
   isFeatured  Boolean @default(false)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
   seasonalityNotes SeasonalityNote[]
 
   @@map("destination_knowledge_entries")
@@ -379,11 +403,10 @@ model SeasonalityNote {
   id            String @id @default(cuid())
   destinationId String
   destination   DestinationKnowledgeEntry @relation(fields: [destinationId], references: [id], onDelete: Cascade)
-
-  month         Int // 1-12
-  rating        Int // 1-5
+  month         Int
+  rating        Int
   notes         String
-  crowds        String // low | medium | high
+  crowds        String
   weather       String
 
   @@map("seasonality_notes")
@@ -395,25 +418,18 @@ model SavedPlace {
   destination String
   country     String
   flagEmoji   String?
-
-  category    String // PlaceCategory
+  category    String
   description String
-
-  priceLevel  Int? // 1-4
+  priceLevel  Int?
   rating      Float?
-
   address     String?
   website     String?
-
   whyWeRecommend String
-  bestFor     String? // JSON array of traveler types
-
+  bestFor     String?
   imageUrl    String?
-
-  tags        String? // JSON array
+  tags        String?
   isFeatured  Boolean @default(false)
   isTopPick   Boolean @default(false)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -426,7 +442,6 @@ model PricingEstimate {
   durationDays Int
   travelerType String
   budgetLevel  String
-
   flightMin    Float
   flightMax    Float
   hotelPerNightMin Float
@@ -435,10 +450,8 @@ model PricingEstimate {
   diningPerDayMax  Float
   activitiesTotal  Float?
   transfersTotal   Float?
-
   totalMin     Float
   totalMax     Float
-
   notes        String?
   lastUpdated  DateTime @default(now())
 
@@ -449,15 +462,11 @@ model EmailTemplate {
   id       String @id @default(cuid())
   name     String
   subject  String
-  category String // welcome | followup | proposal | booking | checkin | thankyou
-
+  category String
   bodyHtml String
   bodyText String
-
-  variables String? // JSON array of {{variable}} placeholders
-
+  variables String?
   isDefault Boolean @default(false)
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -468,12 +477,10 @@ model BusinessSetting {
   id    String @id @default(cuid())
   key   String @unique
   value String
-  type  String @default("string") // string | boolean | number | json
-
+  type  String @default("string")
   label       String?
   description String?
-  group       String? // general | branding | email | notifications
-
+  group       String?
   updatedAt DateTime @updatedAt
 
   @@map("business_settings")
