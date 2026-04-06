@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { createVersion, updateVersion } from "@/actions/versions"
 import { toast } from "sonner"
+import { PlacePicker } from "./PlacePicker"
 
 // ==================== TYPES ====================
 
@@ -176,6 +177,14 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger }: P
     setHotels(prev => prev.map(h => h.id === id ? { ...h, [field]: value } : h))
   }
 
+  const insertSavedHotel = (place: any) => {
+    setHotels(prev => [...prev, {
+      id: uid(), name: place.name, location: `${place.destination}, ${place.country}`,
+      description: place.description, whyRecommended: place.whyWeRecommend,
+    }])
+    toast.success(`Added ${place.name}`)
+  }
+
   // ==================== EXPERIENCE OPERATIONS ====================
 
   const addExperience = () => {
@@ -186,6 +195,35 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger }: P
 
   const updateExperience = (id: string, field: keyof ExperienceItem, value: string) => {
     setExperiences(prev => prev.map(e => e.id === id ? { ...e, [field]: value } : e))
+  }
+
+  const insertSavedExperience = (place: any) => {
+    setExperiences(prev => [...prev, {
+      id: uid(), name: place.name, description: place.whyWeRecommend || place.description, emoji: "✨",
+    }])
+    toast.success(`Added ${place.name}`)
+  }
+
+  // ==================== INSERT SAVED PLACE INTO DAY ====================
+
+  const insertPlaceIntoDay = (dayId: string, place: any) => {
+    const isHotel = ["HOTEL", "RESORT", "BOUTIQUE_HOTEL", "VILLA"].includes(place.category)
+    const isDining = ["RESTAURANT", "CAFE", "BAR"].includes(place.category)
+
+    if (isHotel) {
+      updateDay(dayId, "accommodation", place.name)
+      toast.success(`Set ${place.name} as accommodation`)
+    } else if (isDining) {
+      setDays(prev => prev.map(d => d.id === dayId
+        ? { ...d, meals: [...d.meals, `${place.name} — ${place.whyWeRecommend || place.description}`] }
+        : d))
+      toast.success(`Added ${place.name} to meals`)
+    } else {
+      setDays(prev => prev.map(d => d.id === dayId
+        ? { ...d, activities: [...d.activities, `${place.name} — ${place.whyWeRecommend || place.description}`] }
+        : d))
+      toast.success(`Added ${place.name} to activities`)
+    }
   }
 
   // ==================== LOAD FROM TEMPLATE ====================
@@ -430,10 +468,31 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger }: P
                             <button onClick={() => removeActivity(day.id, ai)} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
                           </div>
                         ))}
-                        <button onClick={() => addActivity(day.id)} className="text-xs text-primary-600 hover:text-primary-800 flex items-center gap-1 py-1">
-                          <Plus className="w-3 h-3" /> Add activity
-                        </button>
+                        <div className="flex gap-2 items-center">
+                          <button onClick={() => addActivity(day.id)} className="text-xs text-primary-600 hover:text-primary-800 flex items-center gap-1 py-1">
+                            <Plus className="w-3 h-3" /> Add custom
+                          </button>
+                          <PlacePicker mode="experience" onSelect={(p) => insertPlaceIntoDay(day.id, p)} trigger={
+                            <button type="button" className="text-xs text-gold-600 hover:text-gold-800 flex items-center gap-1 py-1">
+                              <Sparkles className="w-3 h-3" /> From saved
+                            </button>
+                          } />
+                        </div>
                       </div>
+                    </div>
+
+                    {/* Quick-add saved places to this day */}
+                    <div className="flex gap-2 pt-2 border-t border-gray-100">
+                      <PlacePicker mode="hotel" onSelect={(p) => insertPlaceIntoDay(day.id, p)} trigger={
+                        <button type="button" className="text-xs bg-primary-50 text-primary-600 hover:bg-primary-100 rounded-lg px-2 py-1 flex items-center gap-1 transition-colors">
+                          <Hotel className="w-3 h-3" /> Add hotel
+                        </button>
+                      } />
+                      <PlacePicker mode="dining" onSelect={(p) => insertPlaceIntoDay(day.id, p)} trigger={
+                        <button type="button" className="text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg px-2 py-1 flex items-center gap-1 transition-colors">
+                          <Utensils className="w-3 h-3" /> Add restaurant
+                        </button>
+                      } />
                     </div>
 
                     {/* Transport */}
@@ -483,9 +542,14 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger }: P
                   </div>
                 </div>
               ))}
-              <Button variant="outline" onClick={addHotel} className="w-full border-dashed border-gray-300 text-gray-600">
-                <Plus className="w-4 h-4 mr-2" /> Add Hotel
-              </Button>
+              <div className="flex gap-2">
+                <PlacePicker mode="hotel" onSelect={insertSavedHotel} trigger={
+                  <Button variant="navy" className="flex-1"><Hotel className="w-4 h-4 mr-2" /> From Saved Hotels</Button>
+                } />
+                <Button variant="outline" onClick={addHotel} className="flex-1 border-dashed border-gray-300 text-gray-600">
+                  <Plus className="w-4 h-4 mr-2" /> Add Custom Hotel
+                </Button>
+              </div>
             </div>
           )}
 
@@ -517,9 +581,14 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger }: P
                   </div>
                 </div>
               ))}
-              <Button variant="outline" onClick={addExperience} className="w-full border-dashed border-gray-300 text-gray-600">
-                <Plus className="w-4 h-4 mr-2" /> Add Experience
-              </Button>
+              <div className="flex gap-2">
+                <PlacePicker mode="experience" onSelect={insertSavedExperience} trigger={
+                  <Button variant="navy" className="flex-1"><Sparkles className="w-4 h-4 mr-2" /> From Saved Experiences</Button>
+                } />
+                <Button variant="outline" onClick={addExperience} className="flex-1 border-dashed border-gray-300 text-gray-600">
+                  <Plus className="w-4 h-4 mr-2" /> Add Custom Experience
+                </Button>
+              </div>
             </div>
           )}
 

@@ -17,6 +17,7 @@ import { ProposalFormDialog } from "@/components/admin/ProposalFormDialog"
 import { VersionComparison } from "@/components/admin/VersionComparison"
 import { AddNoteForm } from "@/components/admin/AddNoteForm"
 import { PortalControls } from "@/components/admin/PortalControls"
+import { WorkflowGuide } from "@/components/admin/WorkflowGuide"
 
 export default async function LeadDetailPage({ params }: { params: { id: string } }) {
   const lead = await db.customerLead.findUnique({
@@ -144,6 +145,16 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
         </div>
 
         {/* Tabs */}
+        {/* Workflow Guide */}
+        <WorkflowGuide
+          hasSurvey={!!lead.survey}
+          hasVersions={lead.tripVersions.length > 0}
+          hasProposals={lead.proposals.length > 0}
+          hasPortal={!!lead.portalPage}
+          portalPublished={lead.portalPage?.portalStatus === "PUBLISHED"}
+          hasCustomerAccount={!!customerAccount}
+        />
+
         <Tabs defaultValue="overview">
           <TabsList className="bg-white border border-gray-200 h-auto p-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
