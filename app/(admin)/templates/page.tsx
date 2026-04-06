@@ -1,28 +1,16 @@
 import { db } from "@/lib/db"
 import { AdminHeader } from "@/components/layout/AdminHeader"
-import { Badge } from "@/components/ui/badge"
 import { parseJsonField } from "@/lib/utils"
-import { Map, Star, Clock, DollarSign, Users, Compass } from "lucide-react"
+import { Map, Star, Clock, DollarSign, Users, Compass, ChevronRight } from "lucide-react"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
 import { TemplateFormDialog } from "@/components/admin/TemplateFormDialog"
+import { TemplateActions } from "@/components/admin/TemplateActions"
 
 const budgetLabel: Record<string, string> = {
   UNDER_3K: "Budget", THREE_TO_5K: "Mid-Range", FIVE_TO_10K: "Premium",
   TEN_TO_20K: "Luxury", OVER_20K: "Ultra Luxury",
 }
-
-const paceLabel: Record<string, string> = {
-  slow: "Slow & Deep", moderate: "Balanced", fast: "Active & Full",
-}
-
-const gradients = [
-  "from-primary-900 via-primary-800 to-primary-700",
-  "from-teal-900 via-teal-800 to-emerald-700",
-  "from-indigo-900 via-indigo-800 to-violet-700",
-  "from-rose-900 via-rose-800 to-pink-700",
-  "from-amber-900 via-amber-800 to-orange-700",
-  "from-slate-900 via-slate-800 to-gray-700",
-]
 
 export default async function TemplatesPage() {
   const templates = await db.itineraryTemplate.findMany({
@@ -35,9 +23,13 @@ export default async function TemplatesPage() {
     include: { _count: { select: { items: true } } },
   })
 
+  // Group: featured first, then rest
+  const signature = templates.filter(t => t.isSignature || t.isBestSeller)
+  const standard = templates.filter(t => !t.isSignature && !t.isBestSeller)
+
   return (
     <div className="flex flex-col min-h-full">
-      <AdminHeader title="Template Library" subtitle={`${templates.length} itinerary templates ready to use`} />
+      <AdminHeader title="Template Library" subtitle={`${templates.length} itinerary templates`} />
 
       <div className="flex-1 p-6">
         {/* Collections + Create */}
@@ -47,104 +39,39 @@ export default async function TemplatesPage() {
               <Link
                 key={c.id}
                 href={`/collections/${c.id}`}
-                className="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-1.5 text-sm text-gray-700 hover:border-primary-300 hover:text-primary-700 transition-colors"
+                className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-sm text-gray-600 hover:border-primary-300 hover:text-primary-700 transition-colors"
               >
-                <span>{c.emoji}</span>
-                <span>{c.title}</span>
-                <span className="text-xs text-gray-400">({c._count.items})</span>
+                {c.emoji} {c.title}
+                <span className="text-xs text-gray-400">{c._count.items}</span>
               </Link>
             ))}
           </div>
           <TemplateFormDialog />
         </div>
 
-        {/* Templates grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {templates.map((template, idx) => {
-            const styles = parseJsonField<string[]>(template.travelStyles, [])
-            const types = parseJsonField<string[]>(template.travelerTypes, [])
-            const highlights = parseJsonField<string[]>(template.highlights, [])
-            const gradient = gradients[idx % gradients.length]
+        {/* Signature / Best Sellers */}
+        {signature.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Signature & Best Sellers</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {signature.map(template => (
+                <TemplateCard key={template.id} template={template} featured />
+              ))}
+            </div>
+          </div>
+        )}
 
-            return (
-              <Link
-                key={template.id}
-                href={`/templates/${template.id}`}
-                className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-lg transition-all hover:-translate-y-0.5 overflow-hidden group"
-              >
-                {/* Hero header */}
-                <div className={`bg-gradient-to-br ${gradient} p-6 text-white relative`}>
-                  {/* Badges */}
-                  <div className="absolute top-4 right-4 flex flex-col gap-1">
-                    {template.isSignature && (
-                      <span className="bg-gold-500 text-white text-xs font-semibold rounded-full px-2.5 py-0.5 flex items-center gap-1">
-                        <Compass className="w-3 h-3" /> Signature
-                      </span>
-                    )}
-                    {template.isBestSeller && (
-                      <span className="bg-green-500 text-white text-xs font-semibold rounded-full px-2.5 py-0.5 flex items-center gap-1">
-                        <Star className="w-3 h-3" /> Best Seller
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="text-4xl mb-3">{template.flagEmoji}</div>
-                  <h3 className="font-serif font-bold text-xl leading-tight group-hover:text-gold-200 transition-colors">
-                    {template.title}
-                  </h3>
-                  <p className="text-white/70 text-sm mt-1">{template.destination}, {template.country}</p>
-
-                  {/* Quick stats */}
-                  <div className="flex items-center gap-4 mt-4 pt-3 border-t border-white/20 text-sm text-white/80">
-                    <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {template.durationDays} days</span>
-                    <span className="flex items-center gap-1"><DollarSign className="w-3.5 h-3.5" /> {budgetLabel[template.budgetLevel]}</span>
-                    {template.basePrice && <span className="ml-auto font-semibold text-gold-300">from ${template.basePrice.toLocaleString()}</span>}
-                  </div>
-                </div>
-
-                {/* Body */}
-                <div className="p-5 space-y-4">
-                  <p className="text-sm text-gray-600 leading-relaxed line-clamp-2">{template.summary}</p>
-
-                  {/* Highlights preview */}
-                  {highlights.length > 0 && (
-                    <div className="space-y-1">
-                      {highlights.slice(0, 3).map((h, i) => (
-                        <div key={i} className="flex items-start gap-2 text-xs text-gray-600">
-                          <Star className="w-3 h-3 text-gold-400 shrink-0 mt-0.5" />
-                          <span className="line-clamp-1">{h}</span>
-                        </div>
-                      ))}
-                      {highlights.length > 3 && (
-                        <span className="text-xs text-gray-400 pl-5">+{highlights.length - 3} more highlights</span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Style & type tags */}
-                  <div className="flex flex-wrap gap-1.5 pt-3 border-t border-gray-100">
-                    {styles.slice(0, 3).map(s => (
-                      <span key={s} className="text-xs bg-primary-50 text-primary-700 rounded-full px-2 py-0.5">{s}</span>
-                    ))}
-                    {types.slice(0, 2).map(t => (
-                      <span key={t} className="text-xs bg-sand-100 text-gray-600 rounded-full px-2 py-0.5 flex items-center gap-0.5">
-                        <Users className="w-2.5 h-2.5" /> {t.replace(/_/g, " ")}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Footer meta */}
-                  <div className="flex items-center justify-between text-xs text-gray-400 pt-2">
-                    <span>{template._count.days} day plans · {paceLabel[template.paceLevel] || template.paceLevel} pace</span>
-                    {template._count.collections > 0 && (
-                      <span>In {template._count.collections} collection{template._count.collections > 1 ? "s" : ""}</span>
-                    )}
-                  </div>
-                </div>
-              </Link>
-            )
-          })}
-        </div>
+        {/* All templates */}
+        {standard.length > 0 && (
+          <div>
+            {signature.length > 0 && <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">All Templates</h2>}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {standard.map(template => (
+                <TemplateCard key={template.id} template={template} />
+              ))}
+            </div>
+          </div>
+        )}
 
         {templates.length === 0 && (
           <div className="bg-white rounded-xl border border-dashed border-gray-200 p-16 text-center">
@@ -153,6 +80,68 @@ export default async function TemplatesPage() {
             <TemplateFormDialog />
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function TemplateCard({ template, featured }: { template: any; featured?: boolean }) {
+  const styles = parseJsonField<string[]>(template.travelStyles, [])
+  const highlights = parseJsonField<string[]>(template.highlights, [])
+  const types = parseJsonField<string[]>(template.travelerTypes, [])
+
+  return (
+    <div className={`bg-white rounded-xl border border-gray-100 overflow-hidden group ${featured ? "" : ""}`}>
+      {/* Compact header */}
+      <div className="bg-primary-900 px-5 py-4 text-white flex items-center gap-3">
+        <span className="text-3xl shrink-0">{template.flagEmoji}</span>
+        <div className="flex-1 min-w-0">
+          <Link href={`/templates/${template.id}`} className="font-serif font-bold text-lg leading-tight hover:text-gold-300 transition-colors block truncate">
+            {template.title}
+          </Link>
+          <p className="text-primary-300 text-sm truncate">{template.destination}, {template.country}</p>
+        </div>
+        {template.isSignature && <span className="shrink-0 text-xs bg-gold-500 text-white rounded-full px-2 py-0.5 font-medium">Signature</span>}
+        {template.isBestSeller && !template.isSignature && <span className="shrink-0 text-xs bg-green-500 text-white rounded-full px-2 py-0.5 font-medium">Best Seller</span>}
+      </div>
+
+      <div className="p-5 space-y-3">
+        {/* Key stats — the most scannable info */}
+        <div className="flex items-center gap-4 text-sm text-gray-600">
+          <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-gray-400" /> {template.durationDays} days</span>
+          <span className="flex items-center gap-1"><DollarSign className="w-3.5 h-3.5 text-gray-400" /> {budgetLabel[template.budgetLevel]}</span>
+          <span className="flex items-center gap-1"><Map className="w-3.5 h-3.5 text-gray-400" /> {template._count.days} day plans</span>
+          {template.basePrice && <span className="ml-auto font-semibold text-primary-700">from ${template.basePrice.toLocaleString()}</span>}
+        </div>
+
+        <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">{template.summary}</p>
+
+        {/* Top highlights — shows value fast */}
+        {featured && highlights.length > 0 && (
+          <div className="space-y-1">
+            {highlights.slice(0, 3).map((h, i) => (
+              <div key={i} className="flex items-start gap-1.5 text-xs text-gray-600">
+                <Star className="w-3 h-3 text-gold-400 shrink-0 mt-0.5" />
+                <span className="line-clamp-1">{h}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Tags — compact, useful */}
+        <div className="flex flex-wrap gap-1.5">
+          {styles.slice(0, 3).map(s => (
+            <span key={s} className="text-xs text-primary-700 bg-primary-50 rounded px-1.5 py-0.5">{s}</span>
+          ))}
+          {types.slice(0, 2).map(t => (
+            <span key={t} className="text-xs text-gray-500 bg-gray-50 rounded px-1.5 py-0.5">{t.replace(/_/g, " ")}</span>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="pt-3 border-t border-gray-100">
+          <TemplateActions template={template} />
+        </div>
       </div>
     </div>
   )

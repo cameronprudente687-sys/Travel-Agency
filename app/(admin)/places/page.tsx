@@ -1,31 +1,16 @@
 import { db } from "@/lib/db"
 import { AdminHeader } from "@/components/layout/AdminHeader"
-import { Badge } from "@/components/ui/badge"
 import { parseJsonField } from "@/lib/utils"
 import Link from "next/link"
-import { Star, MapPin, Hotel, Utensils, Sparkles } from "lucide-react"
+import { Star, MapPin, Hotel, Utensils, Sparkles, ExternalLink } from "lucide-react"
 import { PlaceFormDialog } from "@/components/admin/PlaceFormDialog"
+import { PlaceActions } from "@/components/admin/PlaceActions"
 
 const categoryEmoji: Record<string, string> = {
   HOTEL: "🏨", RESORT: "🌴", BOUTIQUE_HOTEL: "🏡", VILLA: "🏰",
   RESTAURANT: "🍽️", CAFE: "☕", BAR: "🍸", EXPERIENCE: "✨",
   ACTIVITY: "🎯", TOUR: "🗺️", SPA: "🧘", BEACH: "🏖️", LANDMARK: "🏛️",
 }
-
-const categoryGroup: Record<string, string> = {
-  HOTEL: "stay", RESORT: "stay", BOUTIQUE_HOTEL: "stay", VILLA: "stay",
-  RESTAURANT: "dine", CAFE: "dine", BAR: "dine",
-  EXPERIENCE: "do", ACTIVITY: "do", TOUR: "do", SPA: "do", BEACH: "do", LANDMARK: "do",
-}
-
-const gradients = [
-  "from-blue-900 to-indigo-800",
-  "from-teal-800 to-emerald-700",
-  "from-amber-800 to-orange-700",
-  "from-rose-800 to-pink-700",
-  "from-violet-800 to-purple-700",
-  "from-slate-800 to-gray-700",
-]
 
 interface Props {
   searchParams: { tab?: string }
@@ -52,108 +37,109 @@ export default async function PlacesPage({ searchParams }: Props) {
   }
 
   const tabs = [
-    { key: "all", label: "All Places", count: counts.all, icon: MapPin },
-    { key: "stay", label: "Hotels", count: counts.stay, icon: Hotel },
-    { key: "dine", label: "Restaurants", count: counts.dine, icon: Utensils },
-    { key: "do", label: "Experiences", count: counts.do, icon: Sparkles },
+    { key: "all", label: "All", count: counts.all, icon: MapPin },
+    { key: "stay", label: "Stay", count: counts.stay, icon: Hotel },
+    { key: "dine", label: "Dine", count: counts.dine, icon: Utensils },
+    { key: "do", label: "Experience", count: counts.do, icon: Sparkles },
   ]
+
+  // Group by destination for scanning
+  const byDest = places.reduce((acc, p) => {
+    const key = p.destination
+    if (!acc[key]) acc[key] = []
+    acc[key].push(p)
+    return acc
+  }, {} as Record<string, typeof places>)
 
   return (
     <div className="flex flex-col min-h-full">
-      <AdminHeader title="Saved Places" subtitle={`Your curated library of ${counts.all} hotels, restaurants & experiences`} />
+      <AdminHeader title="Saved Places" subtitle={`${counts.all} curated places`} />
 
       <div className="flex-1 p-6">
-        {/* Category tabs + create */}
+        {/* Tabs + create */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex gap-2">
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
             {tabs.map(tab => (
               <Link
                 key={tab.key}
                 href={tab.key === "all" ? "/places" : `/places?tab=${tab.key}`}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   activeTab === tab.key
-                    ? "bg-primary-700 text-white"
-                    : "bg-white border border-gray-200 text-gray-600 hover:border-primary-300"
+                    ? "bg-white text-primary-700 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
                 }`}
               >
-                <tab.icon className="w-4 h-4" />
+                <tab.icon className="w-3.5 h-3.5" />
                 {tab.label}
-                <span className={`text-xs rounded-full px-1.5 py-0.5 ${
-                  activeTab === tab.key ? "bg-white/20" : "bg-gray-100"
-                }`}>{tab.count}</span>
+                <span className="text-xs text-gray-400">{tab.count}</span>
               </Link>
             ))}
           </div>
           <PlaceFormDialog />
         </div>
 
-        {/* Places grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-          {places.map((place, idx) => {
-            const bestFor = parseJsonField<string[]>(place.bestFor, [])
-            const gradient = gradients[idx % gradients.length]
-            return (
-              <Link
-                key={place.id}
-                href={`/places/${place.id}`}
-                className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all hover:-translate-y-0.5 overflow-hidden group"
-              >
-                {/* Visual header */}
-                <div className={`bg-gradient-to-br ${gradient} p-5 text-white relative`}>
-                  <div className="flex items-start justify-between">
-                    <span className="text-4xl">{categoryEmoji[place.category] || "📍"}</span>
-                    <div className="flex flex-col items-end gap-1">
-                      {place.isTopPick && (
-                        <span className="flex items-center gap-1 bg-gold-500 text-white text-xs font-semibold rounded-full px-2 py-0.5">
-                          <Star className="w-3 h-3 fill-white" /> Top Pick
-                        </span>
-                      )}
-                      {place.priceLevel && (
-                        <span className="text-white/80 text-sm font-medium">{"$".repeat(place.priceLevel)}</span>
-                      )}
+        {/* Grouped by destination */}
+        {Object.entries(byDest).map(([dest, destPlaces]) => (
+          <div key={dest} className="mb-8">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-lg">{destPlaces[0].flagEmoji}</span>
+              <h2 className="font-semibold text-gray-900">{dest}</h2>
+              <span className="text-xs text-gray-400">{destPlaces.length}</span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {destPlaces.map(place => {
+                const bestFor = parseJsonField<string[]>(place.bestFor, [])
+                return (
+                  <div
+                    key={place.id}
+                    className="bg-white rounded-xl border border-gray-100 p-4 hover:border-primary-200 transition-colors group"
+                  >
+                    {/* Top row: emoji + name + price */}
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl shrink-0">{categoryEmoji[place.category] || "📍"}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <Link href={`/places/${place.id}`} className="font-semibold text-gray-900 text-base hover:text-primary-700 transition-colors truncate">
+                            {place.name}
+                          </Link>
+                          {place.isTopPick && <Star className="w-4 h-4 fill-gold-400 text-gold-400 shrink-0" />}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-0.5">
+                          {place.category.replace(/_/g, " ")}
+                          {place.priceLevel ? ` · ${"$".repeat(place.priceLevel)}` : ""}
+                          {place.rating ? ` · ${place.rating}★` : ""}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <h3 className="font-serif font-bold text-lg mt-3 leading-tight group-hover:text-gold-200 transition-colors">
-                    {place.name}
-                  </h3>
-                  <div className="flex items-center gap-1 text-white/70 text-sm mt-1">
-                    <MapPin className="w-3 h-3" />
-                    {place.destination}, {place.country}
-                  </div>
-                </div>
 
-                {/* Content */}
-                <div className="p-4">
-                  <p className="text-sm text-gray-600 line-clamp-2 mb-3 leading-relaxed">{place.whyWeRecommend}</p>
+                    {/* Why recommended — the most useful info */}
+                    <p className="text-sm text-gray-600 mt-2 line-clamp-2 leading-relaxed">{place.whyWeRecommend}</p>
 
-                  {/* Tags row */}
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    <span className="text-xs bg-primary-50 text-primary-700 rounded-full px-2 py-0.5 font-medium">
-                      {place.category.replace(/_/g, " ")}
-                    </span>
-                    {bestFor.slice(0, 2).map(t => (
-                      <span key={t} className="text-xs bg-sand-100 text-gray-600 rounded-full px-2 py-0.5">
-                        {t.replace(/_/g, " ")}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Rating */}
-                  {place.rating && (
-                    <div className="flex items-center gap-1 pt-2 border-t border-gray-100">
-                      <div className="flex gap-0.5">
-                        {Array.from({ length: Math.round(place.rating) }).map((_, i) => (
-                          <Star key={i} className="w-3.5 h-3.5 fill-gold-400 text-gold-400" />
+                    {/* Tags — only show if they add info */}
+                    {bestFor.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {bestFor.slice(0, 3).map(t => (
+                          <span key={t} className="text-xs text-gray-500 bg-gray-50 rounded px-1.5 py-0.5">{t.replace(/_/g, " ")}</span>
                         ))}
                       </div>
-                      <span className="text-xs text-gray-500 ml-1">{place.rating}</span>
+                    )}
+
+                    {/* Actions — visible on hover for clean look, always accessible */}
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50">
+                      <PlaceActions place={place} />
+                      {place.website && (
+                        <a href={place.website} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-primary-600 flex items-center gap-0.5 ml-auto">
+                          <ExternalLink className="w-3 h-3" /> Website
+                        </a>
+                      )}
                     </div>
-                  )}
-                </div>
-              </Link>
-            )
-          })}
-        </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        ))}
 
         {places.length === 0 && (
           <div className="bg-white rounded-xl border border-dashed border-gray-200 p-16 text-center">
