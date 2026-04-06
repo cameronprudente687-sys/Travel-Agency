@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDate, formatCurrency, parseJsonField } from "@/lib/utils"
 import {
   Mail, Phone, MapPin, Users, DollarSign, Clock,
-  Compass, FileText, Edit
+  Compass, FileText, Edit, Globe
 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -18,6 +18,7 @@ import { VersionComparison } from "@/components/admin/VersionComparison"
 import { AddNoteForm } from "@/components/admin/AddNoteForm"
 import { PortalControls } from "@/components/admin/PortalControls"
 import { WorkflowGuide } from "@/components/admin/WorkflowGuide"
+import { ProposalActions } from "@/components/admin/ProposalActions"
 
 export default async function LeadDetailPage({ params }: { params: { id: string } }) {
   const lead = await db.customerLead.findUnique({
@@ -163,7 +164,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             <TabsTrigger value="versions">Versions ({lead.tripVersions.length})</TabsTrigger>
             <TabsTrigger value="proposals">Proposals ({lead.proposals.length})</TabsTrigger>
             <TabsTrigger value="notes">Notes ({lead.leadNotes.length})</TabsTrigger>
-            {lead.portalPage && <TabsTrigger value="portal">Portal</TabsTrigger>}
+            <TabsTrigger value="portal">Portal</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -437,16 +438,19 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
                         {proposal.sentAt ? `Sent ${formatDate(proposal.sentAt)}` : 'Draft — not sent'}
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                      <ProposalActions
+                        proposalId={proposal.id}
+                        leadId={lead.id}
+                        hasPortal={!!lead.portalPage}
+                        portalSlug={lead.portalPage?.slug}
+                      />
                       <ProposalFormDialog
                         leadId={lead.id}
                         proposal={proposal}
                         versions={versionOptions}
                         trigger={<Button variant="outline" size="sm"><Edit className="w-4 h-4 mr-1" /> Edit</Button>}
                       />
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/proposals/${proposal.id}`}>View</Link>
-                      </Button>
                     </div>
                   </div>
                 </div>
@@ -478,8 +482,8 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
           </TabsContent>
 
           {/* Portal Tab */}
-          {lead.portalPage && (
-            <TabsContent value="portal" className="mt-4">
+          <TabsContent value="portal" className="mt-4">
+            {lead.portalPage ? (
               <PortalControls
                 portal={lead.portalPage}
                 leadId={lead.id}
@@ -489,8 +493,16 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
                 checklistItems={lead.portalPage.checklistItems}
                 checklistTemplates={checklistTemplates}
               />
-            </TabsContent>
-          )}
+            ) : (
+              <div className="bg-white rounded-xl border border-dashed border-gray-200 p-12 text-center">
+                <Globe className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 font-medium mb-2">No portal yet</p>
+                <p className="text-sm text-gray-400 max-w-md mx-auto">
+                  Build an itinerary, generate a proposal, then click &ldquo;Publish to Portal&rdquo; on the Proposals tab to create the customer portal.
+                </p>
+              </div>
+            )}
+          </TabsContent>
         </Tabs>
       </div>
     </div>

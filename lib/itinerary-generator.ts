@@ -142,7 +142,8 @@ export function generateTravelerSummary(survey: SurveyData): GeneratedSummary {
   const styleWords = styles.slice(0, 2).map(s => s.toLowerCase()).join(' and ')
   const paceWord = pace === 'slow' ? 'unhurried' : pace === 'fast' ? 'energetic' : 'balanced'
 
-  const travelerSummary = `This ${travelerDescriptors[0]} is seeking a ${paceWord}, ${styleWords || 'culturally rich'} travel experience. ${
+  const article = /^[aeiou]/i.test(paceWord) ? 'an' : 'a'
+  const travelerSummary = `This ${travelerDescriptors[0]} is seeking ${article} ${paceWord}, ${styleWords || 'culturally rich'} travel experience. ${
     survey.tripFeeling
       ? `They want to feel "${survey.tripFeeling}" — ${survey.oneWord ? `best captured by the word "${survey.oneWord}."` : 'a feeling that should guide every aspect of their itinerary.'}`
       : 'Their ideal trip balances discovery with comfort and genuine local immersion.'

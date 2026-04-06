@@ -133,6 +133,12 @@ export default function SurveyStepPage() {
   const params = useParams()
   const step = parseInt(params.step as string)
 
+  // Redirect invalid step numbers
+  if (isNaN(step) || step < 1 || step > TOTAL_STEPS) {
+    router.replace('/survey/step/1')
+    return null
+  }
+
   const [data, setData] = useState<SurveyData>(() => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('voyagr_survey')

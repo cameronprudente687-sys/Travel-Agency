@@ -53,6 +53,46 @@ const surveySchema = z.object({
   oneWord: z.string().optional(),
 })
 
+// Build survey data object, only including fields that were actually provided
+function buildSurveyData(data: z.infer<typeof surveySchema>) {
+  const result: Record<string, any> = {}
+
+  // Simple string fields — only set if provided
+  const stringFields = [
+    "travelerType", "budget", "pacePreference", "diningStyle",
+    "mustHaveExperiences", "avoidExperiences", "favoriteTrip", "worstTripAspect",
+    "celebrationDetails", "accessibilityNeeds", "otherRequests",
+    "planningInvolvement", "communicationPref", "tripFeeling", "oneWord",
+  ] as const
+  for (const f of stringFields) {
+    if (data[f] !== undefined) result[f] = data[f]
+  }
+
+  // Number fields
+  if (data.groupSize !== undefined) result.groupSize = data.groupSize
+  if (data.tripDurationMin !== undefined) result.tripDurationMin = data.tripDurationMin
+  if (data.tripDurationMax !== undefined) result.tripDurationMax = data.tripDurationMax
+  if (data.tripYear !== undefined) result.tripYear = data.tripYear
+  if (data.diningImportance !== undefined) result.diningImportance = data.diningImportance
+
+  // Boolean fields
+  if (data.budgetFlexible !== undefined) result.budgetFlexible = data.budgetFlexible
+  if (data.destinationsKnown !== undefined) result.destinationsKnown = data.destinationsKnown
+  if (data.openToSuggestions !== undefined) result.openToSuggestions = data.openToSuggestions
+
+  // JSON array fields — only set if provided
+  const jsonArrayFields = [
+    "childrenAges", "tripMonths", "destinationsList", "destinationOpenTo",
+    "travelStyles", "accommodationType", "interests", "dietaryRestrictions",
+    "countriesVisited",
+  ] as const
+  for (const f of jsonArrayFields) {
+    if (data[f] !== undefined) result[f] = JSON.stringify(data[f])
+  }
+
+  return result
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
@@ -67,14 +107,16 @@ export async function POST(req: NextRequest) {
 
     const data = parsed.data
 
-    // Create or update lead
+    // Create or update lead — do NOT reset status on update
+    const existingLead = await db.customerLead.findUnique({ where: { email: data.email } })
     const lead = await db.customerLead.upsert({
       where: { email: data.email },
       update: {
         firstName: data.firstName,
         lastName: data.lastName,
-        phone: data.phone,
-        status: "NEW",
+        ...(data.phone !== undefined ? { phone: data.phone } : {}),
+        // Only set to NEW if this is truly a new submission (no existing lead)
+        ...(existingLead ? {} : { status: "NEW" }),
       },
       create: {
         firstName: data.firstName,
@@ -86,100 +128,38 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // Create survey
-    const survey = await db.tripSurvey.upsert({
+    // Build survey data — only include fields that were actually submitted
+    const surveyData = buildSurveyData(data)
+
+    await db.tripSurvey.upsert({
       where: { leadId: lead.id },
-      update: {
-        travelerType: data.travelerType,
-        groupSize: data.groupSize,
-        childrenAges: data.childrenAges ? JSON.stringify(data.childrenAges) : null,
-        tripDurationMin: data.tripDurationMin,
-        tripDurationMax: data.tripDurationMax,
-        tripYear: data.tripYear,
-        tripMonths: data.tripMonths ? JSON.stringify(data.tripMonths) : null,
-        budget: data.budget,
-        budgetFlexible: data.budgetFlexible || false,
-        destinationsKnown: data.destinationsKnown || false,
-        destinationsList: data.destinationsList ? JSON.stringify(data.destinationsList) : null,
-        destinationOpenTo: data.destinationOpenTo ? JSON.stringify(data.destinationOpenTo) : null,
-        openToSuggestions: data.openToSuggestions || true,
-        travelStyles: data.travelStyles ? JSON.stringify(data.travelStyles) : null,
-        pacePreference: data.pacePreference,
-        accommodationType: data.accommodationType ? JSON.stringify(data.accommodationType) : null,
-        interests: data.interests ? JSON.stringify(data.interests) : null,
-        mustHaveExperiences: data.mustHaveExperiences,
-        avoidExperiences: data.avoidExperiences,
-        diningImportance: data.diningImportance,
-        dietaryRestrictions: data.dietaryRestrictions ? JSON.stringify(data.dietaryRestrictions) : null,
-        diningStyle: data.diningStyle,
-        countriesVisited: data.countriesVisited ? JSON.stringify(data.countriesVisited) : null,
-        favoriteTrip: data.favoriteTrip,
-        worstTripAspect: data.worstTripAspect,
-        celebrationDetails: data.celebrationDetails,
-        accessibilityNeeds: data.accessibilityNeeds,
-        otherRequests: data.otherRequests,
-        planningInvolvement: data.planningInvolvement,
-        communicationPref: data.communicationPref,
-        tripFeeling: data.tripFeeling,
-        oneWord: data.oneWord,
-      },
-      create: {
-        leadId: lead.id,
-        travelerType: data.travelerType,
-        groupSize: data.groupSize,
-        childrenAges: data.childrenAges ? JSON.stringify(data.childrenAges) : null,
-        tripDurationMin: data.tripDurationMin,
-        tripDurationMax: data.tripDurationMax,
-        tripYear: data.tripYear,
-        tripMonths: data.tripMonths ? JSON.stringify(data.tripMonths) : null,
-        budget: data.budget,
-        budgetFlexible: data.budgetFlexible || false,
-        destinationsKnown: data.destinationsKnown || false,
-        destinationsList: data.destinationsList ? JSON.stringify(data.destinationsList) : null,
-        destinationOpenTo: data.destinationOpenTo ? JSON.stringify(data.destinationOpenTo) : null,
-        openToSuggestions: data.openToSuggestions || true,
-        travelStyles: data.travelStyles ? JSON.stringify(data.travelStyles) : null,
-        pacePreference: data.pacePreference,
-        accommodationType: data.accommodationType ? JSON.stringify(data.accommodationType) : null,
-        interests: data.interests ? JSON.stringify(data.interests) : null,
-        mustHaveExperiences: data.mustHaveExperiences,
-        avoidExperiences: data.avoidExperiences,
-        diningImportance: data.diningImportance,
-        dietaryRestrictions: data.dietaryRestrictions ? JSON.stringify(data.dietaryRestrictions) : null,
-        diningStyle: data.diningStyle,
-        countriesVisited: data.countriesVisited ? JSON.stringify(data.countriesVisited) : null,
-        favoriteTrip: data.favoriteTrip,
-        worstTripAspect: data.worstTripAspect,
-        celebrationDetails: data.celebrationDetails,
-        accessibilityNeeds: data.accessibilityNeeds,
-        otherRequests: data.otherRequests,
-        planningInvolvement: data.planningInvolvement,
-        communicationPref: data.communicationPref,
-        tripFeeling: data.tripFeeling,
-        oneWord: data.oneWord,
-      },
+      update: surveyData,
+      create: { leadId: lead.id, ...surveyData },
     })
 
-    // Generate traveler summary
+    // Read back the full survey for summary generation
+    const fullSurvey = await db.tripSurvey.findUnique({ where: { leadId: lead.id } })
+
+    // Generate traveler summary from complete survey data
     const summaryData = generateTravelerSummary({
-      travelerType: data.travelerType,
-      groupSize: data.groupSize,
-      travelStyles: data.travelStyles ? JSON.stringify(data.travelStyles) : null,
-      pacePreference: data.pacePreference,
-      destinationsList: data.destinationsList ? JSON.stringify(data.destinationsList) : null,
-      destinationsKnown: data.destinationsKnown,
-      openToSuggestions: data.openToSuggestions,
-      budget: data.budget,
-      tripDurationMin: data.tripDurationMin,
-      tripDurationMax: data.tripDurationMax,
-      interests: data.interests ? JSON.stringify(data.interests) : null,
-      diningStyle: data.diningStyle,
-      diningImportance: data.diningImportance,
-      mustHaveExperiences: data.mustHaveExperiences,
-      avoidExperiences: data.avoidExperiences,
-      tripFeeling: data.tripFeeling,
-      oneWord: data.oneWord,
-      accommodationType: data.accommodationType ? JSON.stringify(data.accommodationType) : null,
+      travelerType: fullSurvey?.travelerType,
+      groupSize: fullSurvey?.groupSize,
+      travelStyles: fullSurvey?.travelStyles,
+      pacePreference: fullSurvey?.pacePreference,
+      destinationsList: fullSurvey?.destinationsList,
+      destinationsKnown: fullSurvey?.destinationsKnown,
+      openToSuggestions: fullSurvey?.openToSuggestions,
+      budget: fullSurvey?.budget,
+      tripDurationMin: fullSurvey?.tripDurationMin,
+      tripDurationMax: fullSurvey?.tripDurationMax,
+      interests: fullSurvey?.interests,
+      diningStyle: fullSurvey?.diningStyle,
+      diningImportance: fullSurvey?.diningImportance,
+      mustHaveExperiences: fullSurvey?.mustHaveExperiences,
+      avoidExperiences: fullSurvey?.avoidExperiences,
+      tripFeeling: fullSurvey?.tripFeeling,
+      oneWord: fullSurvey?.oneWord,
+      accommodationType: fullSurvey?.accommodationType,
     })
 
     await db.generatedTravelerSummary.upsert({
