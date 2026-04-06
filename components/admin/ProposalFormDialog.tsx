@@ -30,7 +30,7 @@ export function ProposalFormDialog({ leadId, proposal, versions = [], trigger }:
 
   const [title, setTitle] = useState(proposal?.title || "")
   const [status, setStatus] = useState(proposal?.status || "DRAFT")
-  const [versionId, setVersionId] = useState(proposal?.versionId || "")
+  const [versionId, setVersionId] = useState(proposal?.versionId || "none")
   const [introMessage, setIntroMessage] = useState(proposal?.introMessage || "")
   const [itinerarySummary, setItinerarySummary] = useState(proposal?.itinerarySummary || "")
   const [inclusions, setInclusions] = useState(parseJson(proposal?.inclusions, []).join("\n"))
@@ -67,7 +67,7 @@ export function ProposalFormDialog({ leadId, proposal, versions = [], trigger }:
         exclusions: exclusions.split("\n").filter(Boolean),
         advisorSignOff,
         status,
-        versionId: versionId || undefined,
+        versionId: versionId && versionId !== "none" ? versionId : undefined,
       }
 
       if (isEdit) {
@@ -130,7 +130,7 @@ export function ProposalFormDialog({ leadId, proposal, versions = [], trigger }:
               <Select value={versionId} onValueChange={setVersionId}>
                 <SelectTrigger className="text-base"><SelectValue placeholder="Select a version (optional)" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No linked version</SelectItem>
+                  <SelectItem value="none">No linked version</SelectItem>
                   {versions.map(v => (
                     <SelectItem key={v.id} value={v.id}>V{v.versionNumber}: {v.title}</SelectItem>
                   ))}
