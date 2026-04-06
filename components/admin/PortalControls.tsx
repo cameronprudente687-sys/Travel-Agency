@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { publishPortal, unpublishPortal, updatePortalMessage, createCustomerAccount } from "@/actions/portal"
 import { generateChecklistFromItinerary, createChecklistItem, deleteChecklistItem, applyChecklistTemplate } from "@/actions/checklist"
-import { Globe, GlobeLock, UserPlus, Plus, Trash2, ListChecks, Wand2, Copy, CheckCircle, User, Mail, KeyRound } from "lucide-react"
+import { Globe, GlobeLock, UserPlus, Plus, Trash2, ListChecks, Wand2, Copy, CheckCircle, User, Mail } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "sonner"
 
@@ -143,18 +143,18 @@ function CustomerAccessSection({
   portalPublished: boolean
 }) {
   const [isPending, startTransition] = useTransition()
-  const [credentials, setCredentials] = useState<{ email: string; password: string } | null>(null)
+  const [inviteToken, setInviteToken] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+
+  const hasAccount = !!customerAccount
 
   const handleCreateAccount = () => {
     startTransition(async () => {
       try {
         const result = await createCustomerAccount(leadId) as any
-        if (result.tempPassword) {
-          setCredentials({ email: leadEmail, password: result.tempPassword })
-          toast.success("Customer login created")
-        } else {
-          toast.success("Account already exists")
+        if (result.inviteToken) {
+          setInviteToken(result.inviteToken)
+          toast.success("Customer account created — setup link ready")
         }
       } catch (e: any) {
         toast.error(e.message || "Failed to create account")
@@ -169,15 +169,20 @@ function CustomerAccessSection({
     setTimeout(() => setCopied(null), 2000)
   }
 
-  const hasAccount = !!customerAccount
-  const expectedPassword = `${leadFirstName.toLowerCase()}2025`
+  // Build the setup link
+  const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
+  const setupLink = inviteToken ? `${baseUrl}/welcome?token=${inviteToken}` : null
+
+  // Build a message the advisor can send to the customer
+  const portalMessage = setupLink
+    ? `Hi ${leadFirstName}!\n\nYour personalized trip plan is ready to view. Click the link below to set your password and access your trip portal:\n\n${setupLink}\n\nOnce you've set your password, you can sign in anytime at ${baseUrl}/login to view your trip details, checklist, and more.\n\nLooking forward to making this trip incredible!\n\nWarm regards,\nYour Voyagr Advisor`
+    : null
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
       <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Customer Access</h3>
 
-      {!hasAccount && !credentials ? (
-        // No account yet
+      {!hasAccount && !inviteToken ? (
         <div>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
@@ -199,14 +204,15 @@ function CustomerAccessSection({
           </Button>
         </div>
       ) : (
-        // Account exists or just created
         <div>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
               <CheckCircle className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-700">Customer login active</p>
+              <p className="text-sm font-medium text-gray-700">
+                {inviteToken ? "Account created — send setup link" : "Customer login active"}
+              </p>
               {customerAccount && (
                 <p className="text-xs text-gray-400">
                   Created {new Date(customerAccount.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -215,57 +221,55 @@ function CustomerAccessSection({
             </div>
           </div>
 
-          {/* Credentials display */}
-          <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Login Credentials</p>
-
-            <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2.5">
-              <div className="flex items-center gap-2 min-w-0">
-                <Mail className="w-4 h-4 text-gray-400 shrink-0" />
-                <span className="text-sm text-gray-800 truncate">{customerAccount?.email || leadEmail}</span>
+          {/* Setup link (shown right after account creation) */}
+          {setupLink && (
+            <div className="bg-gold-50 rounded-xl border border-gold-200 p-4 mb-4">
+              <p className="text-sm font-medium text-gold-800 mb-2">Password Setup Link</p>
+              <p className="text-xs text-gold-700 mb-3">Send this link to {leadFirstName}. They&apos;ll choose their own password.</p>
+              <div className="flex items-center gap-2 bg-white rounded-lg border border-gold-200 px-3 py-2.5">
+                <span className="text-sm text-gray-700 truncate flex-1 font-mono">{setupLink}</span>
+                <button onClick={() => copyToClipboard(setupLink, "Link")} className="text-primary-600 hover:text-primary-800 shrink-0">
+                  {copied === "Link" ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                </button>
               </div>
-              <button
-                onClick={() => copyToClipboard(customerAccount?.email || leadEmail, "Email")}
-                className="text-primary-600 hover:text-primary-800 shrink-0 ml-2"
-              >
-                {copied === "Email" ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-              </button>
             </div>
+          )}
 
-            <div className="flex items-center justify-between bg-white rounded-lg border border-gray-200 px-3 py-2.5">
-              <div className="flex items-center gap-2 min-w-0">
-                <KeyRound className="w-4 h-4 text-gray-400 shrink-0" />
-                <span className="text-sm text-gray-800 font-mono">
-                  {credentials?.password || expectedPassword}
-                </span>
+          {/* Ready-to-send message */}
+          {portalMessage && (
+            <div className="bg-gray-50 rounded-xl p-4 mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Message to Send</p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(portalMessage, "Message")}
+                  className="h-7 text-xs"
+                >
+                  <Copy className="w-3 h-3 mr-1" />
+                  {copied === "Message" ? "Copied!" : "Copy Message"}
+                </Button>
               </div>
-              <button
-                onClick={() => copyToClipboard(credentials?.password || expectedPassword, "Password")}
-                className="text-primary-600 hover:text-primary-800 shrink-0 ml-2"
-              >
-                {copied === "Password" ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
-              </button>
+              <pre className="text-sm text-gray-700 whitespace-pre-wrap bg-white rounded-lg border border-gray-200 p-3 max-h-48 overflow-y-auto font-sans leading-relaxed">{portalMessage}</pre>
             </div>
+          )}
 
-            <p className="text-xs text-gray-400">
-              Share these credentials with {leadFirstName} so they can sign in at /login and view their trip.
-            </p>
+          {/* Account info */}
+          <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2.5">
+            <Mail className="w-4 h-4 text-gray-400 shrink-0" />
+            <span className="text-sm text-gray-700">{customerAccount?.email || leadEmail}</span>
+            <button onClick={() => copyToClipboard(customerAccount?.email || leadEmail, "Email")} className="text-primary-600 hover:text-primary-800 shrink-0 ml-auto">
+              {copied === "Email" ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+            </button>
           </div>
 
-          {/* Copy all button */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => {
-              const email = customerAccount?.email || leadEmail
-              const pw = credentials?.password || expectedPassword
-              copyToClipboard(`Email: ${email}\nPassword: ${pw}`, "Credentials")
-            }}
-          >
-            <Copy className="w-4 h-4 mr-1" />
-            {copied === "Credentials" ? "Copied!" : "Copy All Credentials"}
-          </Button>
+          {/* Resend setup link */}
+          {hasAccount && !inviteToken && (
+            <Button variant="outline" size="sm" className="mt-3" onClick={handleCreateAccount} disabled={isPending}>
+              <UserPlus className="w-4 h-4 mr-1" />
+              {isPending ? "Generating..." : "Generate New Setup Link"}
+            </Button>
+          )}
         </div>
       )}
     </div>

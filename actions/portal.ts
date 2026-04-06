@@ -2,8 +2,8 @@
 
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
-import { slugify } from "@/lib/utils"
 import bcrypt from "bcryptjs"
+import crypto from "crypto"
 
 export async function publishPortal(portalId: string) {
   await db.clientPortalPage.update({
@@ -54,27 +54,37 @@ export async function createCustomerAccount(leadId: string) {
   const lead = await db.customerLead.findUnique({ where: { id: leadId } })
   if (!lead) throw new Error("Lead not found")
 
-  // Check if account already exists
   const existing = await db.user.findUnique({ where: { email: lead.email } })
   if (existing) {
-    if (existing.role === "CLIENT") return existing
+    if (existing.role === "CLIENT") {
+      // Return existing account with a fresh invite token
+      const token = crypto.randomBytes(32).toString("hex")
+      await db.user.update({
+        where: { id: existing.id },
+        data: { inviteToken: token, tokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
+      })
+      revalidatePath(`/leads/${leadId}`)
+      return { user: existing, inviteToken: token }
+    }
     throw new Error("Email already used by an advisor account")
   }
 
-  // Create a simple password from first name + last 4 of email
-  const simplePassword = `${lead.firstName.toLowerCase()}2025`
-  const hashedPassword = await bcrypt.hash(simplePassword, 12)
+  // Generate invite token and a placeholder password (customer will set their own)
+  const token = crypto.randomBytes(32).toString("hex")
+  const placeholderPassword = await bcrypt.hash(crypto.randomBytes(16).toString("hex"), 12)
 
   const user = await db.user.create({
     data: {
       email: lead.email,
       name: `${lead.firstName} ${lead.lastName}`,
       role: "CLIENT",
-      password: hashedPassword,
+      password: placeholderPassword,
       leadId: leadId,
+      inviteToken: token,
+      tokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     },
   })
 
   revalidatePath(`/leads/${leadId}`)
-  return { user, tempPassword: simplePassword }
+  return { user, inviteToken: token }
 }

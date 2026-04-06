@@ -31,6 +31,8 @@ model User {
   avatar    String?
   bio       String?
   leadId    String?  @unique // Links CLIENT users to their CustomerLead
+  inviteToken   String?  @unique // One-time token for password setup
+  tokenExpiresAt DateTime? // Token expiry
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
