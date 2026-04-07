@@ -2,27 +2,33 @@ import { db } from "@/lib/db"
 import { AdminHeader } from "@/components/layout/AdminHeader"
 import { parseJsonField } from "@/lib/utils"
 import Link from "next/link"
-import { Star, MapPin, Hotel, Utensils, Sparkles, ExternalLink } from "lucide-react"
+import { MapPin, Hotel, Utensils, Sparkles } from "lucide-react"
 import { PlaceFormDialog } from "@/components/admin/PlaceFormDialog"
-import { PlaceActions } from "@/components/admin/PlaceActions"
-
-const categoryEmoji: Record<string, string> = {
-  HOTEL: "🏨", RESORT: "🌴", BOUTIQUE_HOTEL: "🏡", VILLA: "🏰",
-  RESTAURANT: "🍽️", CAFE: "☕", BAR: "🍸", EXPERIENCE: "✨",
-  ACTIVITY: "🎯", TOUR: "🗺️", SPA: "🧘", BEACH: "🏖️", LANDMARK: "🏛️",
-}
+import { PlaceCard } from "@/components/admin/PlaceCard"
+import { SearchBar } from "@/components/admin/SearchBar"
+import { Suspense } from "react"
 
 interface Props {
-  searchParams: { tab?: string }
+  searchParams: { tab?: string; q?: string }
 }
 
 export default async function PlacesPage({ searchParams }: Props) {
   const activeTab = searchParams.tab || "all"
+  const searchQuery = searchParams.q || ""
 
   const where: any = {}
   if (activeTab === "stay") where.category = { in: ["HOTEL", "RESORT", "BOUTIQUE_HOTEL", "VILLA"] }
   if (activeTab === "dine") where.category = { in: ["RESTAURANT", "CAFE", "BAR"] }
   if (activeTab === "do") where.category = { in: ["EXPERIENCE", "ACTIVITY", "TOUR", "SPA", "BEACH", "LANDMARK"] }
+
+  if (searchQuery) {
+    where.OR = [
+      { name: { contains: searchQuery } },
+      { destination: { contains: searchQuery } },
+      { description: { contains: searchQuery } },
+      { whyWeRecommend: { contains: searchQuery } },
+    ]
+  }
 
   const places = await db.savedPlace.findMany({
     where,
@@ -43,11 +49,10 @@ export default async function PlacesPage({ searchParams }: Props) {
     { key: "do", label: "Experience", count: counts.do, icon: Sparkles },
   ]
 
-  // Group by destination for scanning
+  // Group by destination
   const byDest = places.reduce((acc, p) => {
-    const key = p.destination
-    if (!acc[key]) acc[key] = []
-    acc[key].push(p)
+    if (!acc[p.destination]) acc[p.destination] = []
+    acc[p.destination].push(p)
     return acc
   }, {} as Record<string, typeof places>)
 
@@ -56,8 +61,8 @@ export default async function PlacesPage({ searchParams }: Props) {
       <AdminHeader title="Saved Places" subtitle={`${counts.all} curated places`} />
 
       <div className="flex-1 p-6">
-        {/* Tabs + create */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Tabs + search + create */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div className="flex gap-1 bg-gray-100 rounded-lg p-0.5">
             {tabs.map(tab => (
               <Link
@@ -75,8 +80,18 @@ export default async function PlacesPage({ searchParams }: Props) {
               </Link>
             ))}
           </div>
-          <PlaceFormDialog />
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <Suspense>
+              <SearchBar basePath="/places" placeholder="Search places..." preserveParams={["tab"]} />
+            </Suspense>
+            <PlaceFormDialog />
+          </div>
         </div>
+
+        {/* Results info */}
+        {searchQuery && (
+          <p className="text-sm text-gray-500 mb-4">{places.length} result{places.length !== 1 ? "s" : ""} for &ldquo;{searchQuery}&rdquo;</p>
+        )}
 
         {/* Grouped by destination */}
         {Object.entries(byDest).map(([dest, destPlaces]) => (
@@ -88,55 +103,13 @@ export default async function PlacesPage({ searchParams }: Props) {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {destPlaces.map(place => {
-                const bestFor = parseJsonField<string[]>(place.bestFor, [])
-                return (
-                  <div
-                    key={place.id}
-                    className="bg-white rounded-xl border border-gray-100 p-4 hover:border-primary-200 transition-colors group"
-                  >
-                    {/* Top row: emoji + name + price */}
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl shrink-0">{categoryEmoji[place.category] || "📍"}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <Link href={`/places/${place.id}`} className="font-semibold text-gray-900 text-base hover:text-primary-700 transition-colors truncate">
-                            {place.name}
-                          </Link>
-                          {place.isTopPick && <Star className="w-4 h-4 fill-gold-400 text-gold-400 shrink-0" />}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          {place.category.replace(/_/g, " ")}
-                          {place.priceLevel ? ` · ${"$".repeat(place.priceLevel)}` : ""}
-                          {place.rating ? ` · ${place.rating}★` : ""}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Why recommended — the most useful info */}
-                    <p className="text-sm text-gray-600 mt-2 line-clamp-2 leading-relaxed">{place.whyWeRecommend}</p>
-
-                    {/* Tags — only show if they add info */}
-                    {bestFor.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {bestFor.slice(0, 3).map(t => (
-                          <span key={t} className="text-xs text-gray-500 bg-gray-50 rounded px-1.5 py-0.5">{t.replace(/_/g, " ")}</span>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Actions — visible on hover for clean look, always accessible */}
-                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-50">
-                      <PlaceActions place={place} />
-                      {place.website && (
-                        <a href={place.website} target="_blank" rel="noopener noreferrer" className="text-xs text-gray-400 hover:text-primary-600 flex items-center gap-0.5 ml-auto">
-                          <ExternalLink className="w-3 h-3" /> Website
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+              {destPlaces.map(place => (
+                <PlaceCard
+                  key={place.id}
+                  place={place}
+                  bestFor={parseJsonField<string[]>(place.bestFor, [])}
+                />
+              ))}
             </div>
           </div>
         ))}
@@ -144,7 +117,9 @@ export default async function PlacesPage({ searchParams }: Props) {
         {places.length === 0 && (
           <div className="bg-white rounded-xl border border-dashed border-gray-200 p-16 text-center">
             <MapPin className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium mb-2">No places in this category</p>
+            <p className="text-gray-500 font-medium mb-2">
+              {searchQuery ? `No places matching "${searchQuery}"` : "No places in this category"}
+            </p>
             <PlaceFormDialog />
           </div>
         )}
