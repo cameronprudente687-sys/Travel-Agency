@@ -11,7 +11,7 @@ const setupSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // Only allow if no admin/advisor exists
+    // Only allow if no admin/advisor exists (first-time setup only)
     const adminCount = await db.user.count({
       where: { role: { in: ["ADMIN", "ADVISOR"] } },
     })
@@ -35,7 +35,15 @@ export async function POST(req: NextRequest) {
 
     const { name, email, password } = parsed.data
 
-    // Check if email is already taken
+    // In production, only allow the designated admin email if set
+    const allowedAdminEmail = process.env.ADMIN_EMAIL
+    if (allowedAdminEmail && email.toLowerCase() !== allowedAdminEmail.toLowerCase()) {
+      return NextResponse.json(
+        { error: "This email is not authorized for admin setup." },
+        { status: 403 }
+      )
+    }
+
     const existing = await db.user.findUnique({ where: { email } })
     if (existing) {
       return NextResponse.json(

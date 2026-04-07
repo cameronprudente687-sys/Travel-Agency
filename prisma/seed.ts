@@ -2,9 +2,57 @@ const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcryptjs')
 
 const prisma = new PrismaClient()
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 
 async function main() {
-  console.log('Seeding Voyagr database...')
+  if (IS_PRODUCTION) {
+    console.log('⚠️  Production environment detected.')
+    console.log('Skipping demo data seed. Use ADMIN_EMAIL and ADMIN_PASSWORD env vars')
+    console.log('or the /setup page to create the production admin account.')
+    console.log('')
+
+    // In production, only bootstrap the admin from env vars if provided
+    const adminEmail = process.env.ADMIN_EMAIL
+    const adminPassword = process.env.ADMIN_PASSWORD
+    const adminName = process.env.ADMIN_NAME || 'Voyagr Admin'
+
+    if (adminEmail && adminPassword) {
+      const existing = await prisma.user.findUnique({ where: { email: adminEmail } })
+      if (!existing) {
+        const hashed = await bcrypt.hash(adminPassword, 12)
+        await prisma.user.create({
+          data: { email: adminEmail, name: adminName, role: 'ADMIN', password: hashed },
+        })
+        console.log(`✅ Production admin created: ${adminEmail}`)
+      } else {
+        console.log(`Admin already exists: ${adminEmail}`)
+      }
+    } else {
+      console.log('No ADMIN_EMAIL/ADMIN_PASSWORD set. Use /setup page for first-time setup.')
+    }
+
+    // Create default business settings if they don't exist
+    const settingsCount = await prisma.businessSetting.count()
+    if (settingsCount === 0) {
+      const settings = [
+        { key: 'business_name', value: 'Voyagr Travel', type: 'string', label: 'Business Name', group: 'general' },
+        { key: 'advisor_name', value: adminName, type: 'string', label: 'Primary Advisor Name', group: 'general' },
+        { key: 'contact_email', value: adminEmail || '', type: 'string', label: 'Contact Email', group: 'general' },
+      ]
+      for (const s of settings) {
+        await prisma.businessSetting.create({ data: s })
+      }
+      console.log('Created default business settings')
+    }
+
+    return
+  }
+
+  // ============================================================
+  // DEVELOPMENT / DEMO SEED — only runs when NODE_ENV !== 'production'
+  // ============================================================
+  console.log('Development mode — seeding demo data...')
+  console.log('')
 
   // Clear existing data
   await prisma.checklistCompletion.deleteMany()
