@@ -3,8 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  Compass, LayoutDashboard, Users, Map, Archive, Star, Database,
-  MapPin, FileText, Mail, Settings, BookOpen, Folder, DollarSign,
+  Compass, LayoutDashboard, Users, Map, Star,
+  MapPin, FileText, Settings, BookOpen, Folder,
   LogOut
 } from "lucide-react"
 import { signOut } from "next-auth/react"
@@ -17,9 +17,7 @@ const navItems = [
   { label: "Templates", href: "/templates", icon: Map },
   { label: "Collections", href: "/collections", icon: Folder },
   { label: "Past Trips", href: "/past-trips", icon: Star },
-  { label: "Destinations", href: "/destinations", icon: Database },
   { label: "Saved Places", href: "/places", icon: MapPin },
-  { label: "Emails", href: "/emails", icon: Mail },
   { label: "Settings", href: "/settings", icon: Settings },
 ]
 
