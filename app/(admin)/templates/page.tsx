@@ -28,12 +28,7 @@ export default async function TemplatesPage({ searchParams }: Props) {
   const templates = await db.itineraryTemplate.findMany({
     where,
     orderBy: [{ isBestSeller: "desc" }, { isFeatured: "desc" }, { createdAt: "desc" }],
-    include: { _count: { select: { days: true, collections: true } } },
-  })
-
-  const collections = await db.tripCollection.findMany({
-    orderBy: { sortOrder: "asc" },
-    include: { _count: { select: { items: true } } },
+    include: { _count: { select: { days: true } } },
   })
 
   const signature = templates.filter(t => t.isSignature || t.isBestSeller)
@@ -46,18 +41,7 @@ export default async function TemplatesPage({ searchParams }: Props) {
       <div className="flex-1 p-6">
         {/* Collections + search + create */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-          <div className="flex flex-wrap gap-2">
-            {collections.map(c => (
-              <Link
-                key={c.id}
-                href={`/collections/${c.id}`}
-                className="flex items-center gap-1.5 bg-white border border-gray-200 rounded-full px-3 py-1 text-sm text-gray-600 hover:border-primary-300 hover:text-primary-700 transition-colors"
-              >
-                {c.emoji} {c.title}
-                <span className="text-xs text-gray-400">{c._count.items}</span>
-              </Link>
-            ))}
-          </div>
+          <div />
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <Suspense>
               <SearchBar basePath="/templates" placeholder="Search templates..." />

@@ -13,7 +13,6 @@ export default async function TemplateDetailPage({ params }: { params: { id: str
     where: { id: params.id },
     include: {
       days: { orderBy: { dayNumber: "asc" } },
-      collections: { include: { collection: true } },
     },
   })
 
@@ -224,24 +223,7 @@ export default async function TemplateDetailPage({ params }: { params: { id: str
               </div>
             )}
 
-            {/* Collections */}
-            {template.collections.length > 0 && (
-              <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                <h3 className="font-semibold text-gray-900 mb-3">In Collections</h3>
-                <div className="space-y-2">
-                  {template.collections.map(ci => (
-                    <Link
-                      key={ci.collectionId}
-                      href={`/collections/${ci.collectionId}`}
-                      className="flex items-center gap-2 text-sm text-primary-700 hover:underline"
-                    >
-                      <span>{ci.collection.emoji}</span>
-                      {ci.collection.title}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
+
           </div>
         </div>
       </div>
