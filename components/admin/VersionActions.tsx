@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useTransition } from "react"
 import { Button } from "@/components/ui/button"
 import { generateProposalFromVersion } from "@/actions/proposals"
 import { duplicateVersion, deleteVersion } from "@/actions/versions"
 import { FileText, Copy, Trash2 } from "lucide-react"
 import { toast } from "sonner"
+import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog"
 
 interface Props {
   version: any
@@ -58,6 +59,7 @@ export function VersionActions({ version, leadId, leadFirstName, hasProposal }: 
           <FileText className="w-3.5 h-3.5 mr-1" /> Generate Proposal
         </Button>
       )}
+      <SaveAsTemplateDialog version={version} />
       <Button variant="outline" size="sm" onClick={handleDuplicate} disabled={isPending}>
         <Copy className="w-3.5 h-3.5 mr-1" /> Duplicate
       </Button>

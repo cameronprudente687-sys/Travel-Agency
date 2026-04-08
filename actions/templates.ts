@@ -89,3 +89,87 @@ export async function duplicateTemplate(id: string) {
   revalidatePath("/templates")
   return copy
 }
+
+export async function saveVersionAsTemplate(versionId: string, overrides: {
+  title: string
+  destination: string
+  country: string
+  flagEmoji?: string
+  travelStyles: string[]
+  travelerTypes: string[]
+  budgetLevel: string
+  paceLevel: string
+  isSignature?: boolean
+  isBestSeller?: boolean
+}) {
+  const version = await db.tripVersion.findUnique({ where: { id: versionId } })
+  if (!version) throw new Error("Version not found")
+
+  const itinerary = JSON.parse(version.itinerary || "[]") as any[]
+  const hotels = JSON.parse(version.hotelIdeas || "[]") as any[]
+  const experiences = JSON.parse(version.experiences || "[]") as any[]
+  const destinations = JSON.parse(version.destinations || "[]") as string[]
+
+  // Build highlights from itinerary + experiences (strip client-specific content)
+  const highlights = [
+    ...experiences.map((e: any) => e.name).filter(Boolean),
+    ...itinerary.slice(0, 4).map((d: any) => d.title).filter(Boolean),
+  ].slice(0, 8)
+
+  // Build includes from hotels + experiences
+  const includes = [
+    `${itinerary.length} days / ${Math.max(itinerary.length - 1, 1)} nights accommodation`,
+    ...hotels.map((h: any) => h.name ? `Stay: ${h.name}` : null).filter(Boolean).slice(0, 3),
+    ...experiences.map((e: any) => e.name).filter(Boolean).slice(0, 3),
+    "Detailed day-by-day itinerary",
+    "Dedicated trip support",
+  ]
+
+  const template = await db.itineraryTemplate.create({
+    data: {
+      title: overrides.title,
+      destination: overrides.destination || destinations.join(", "),
+      country: overrides.country,
+      flagEmoji: overrides.flagEmoji || null,
+      summary: version.summary || `${overrides.destination} — ${itinerary.length} day itinerary`,
+      description: version.summary || "",
+      durationDays: version.durationDays || itinerary.length,
+      travelStyles: JSON.stringify(overrides.travelStyles),
+      travelerTypes: JSON.stringify(overrides.travelerTypes),
+      budgetLevel: overrides.budgetLevel,
+      paceLevel: overrides.paceLevel,
+      status: "ACTIVE",
+      isFeatured: false,
+      isBestSeller: overrides.isBestSeller || false,
+      isSignature: overrides.isSignature || false,
+      highlights: JSON.stringify(highlights),
+      includes: JSON.stringify(includes),
+      basePrice: version.estimatedCost || null,
+    },
+  })
+
+  // Create template days from itinerary — stripped of client-specific notes
+  for (let i = 0; i < itinerary.length; i++) {
+    const day = itinerary[i]
+    await db.templateDay.create({
+      data: {
+        templateId: template.id,
+        dayNumber: i + 1,
+        title: day.title || `Day ${i + 1}`,
+        location: day.location || "",
+        description: day.description || "",
+        activities: JSON.stringify(
+          Array.isArray(day.activities) ? day.activities : []
+        ),
+        meals: day.meals ? JSON.stringify(
+          Array.isArray(day.meals) ? day.meals : []
+        ) : null,
+        accommodation: day.accommodation || null,
+        transportNotes: day.transportNotes || null,
+      },
+    })
+  }
+
+  revalidatePath("/templates")
+  return template
+}

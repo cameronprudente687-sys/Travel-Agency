@@ -1,174 +1,98 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Loader2 } from "lucide-react"
-import { toast } from "sonner"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Plus } from "lucide-react"
 import { createTemplate, updateTemplate } from "@/actions/templates"
+import { toast } from "sonner"
 
-interface TemplateFormDialogProps {
+const TRAVEL_STYLES = ["LUXURY", "ADVENTURE", "CULTURAL", "ROMANTIC", "FAMILY", "SOLO", "WELLNESS", "FOODIE", "SCENIC"]
+const TRAVELER_TYPES = ["COUPLE", "SOLO", "FAMILY_YOUNG_KIDS", "FAMILY_TEENS", "GROUP_FRIENDS", "MULTI_GEN", "HONEYMOON", "ANNIVERSARY"]
+const BUDGET_LEVELS = [
+  { value: "UNDER_3K", label: "Budget" },
+  { value: "THREE_TO_5K", label: "Mid-Range" },
+  { value: "FIVE_TO_10K", label: "Premium" },
+  { value: "TEN_TO_20K", label: "Luxury" },
+  { value: "OVER_20K", label: "Ultra Luxury" },
+]
+const PACE_LEVELS = [
+  { value: "slow", label: "Slow & Deep" },
+  { value: "moderate", label: "Balanced" },
+  { value: "fast", label: "Active" },
+]
+
+function parseJson(val: any, fb: any) {
+  if (!val) return fb
+  try { return typeof val === "string" ? JSON.parse(val) : val } catch { return fb }
+}
+
+interface Props {
   template?: any
   trigger?: React.ReactNode
 }
 
-const BUDGET_LEVELS = [
-  { value: "UNDER_3K", label: "Under $3K" },
-  { value: "THREE_TO_5K", label: "$3K - $5K" },
-  { value: "FIVE_TO_10K", label: "$5K - $10K" },
-  { value: "TEN_TO_20K", label: "$10K - $20K" },
-  { value: "OVER_20K", label: "Over $20K" },
-]
-
-const PACE_LEVELS = [
-  { value: "slow", label: "Slow" },
-  { value: "moderate", label: "Moderate" },
-  { value: "fast", label: "Fast" },
-]
-
-const TRAVEL_STYLES = [
-  "LUXURY",
-  "ADVENTURE",
-  "CULTURAL",
-  "ROMANTIC",
-  "FAMILY",
-  "SOLO",
-  "WELLNESS",
-  "FOODIE",
-  "SCENIC",
-]
-
-const TRAVELER_TYPES = [
-  "COUPLE",
-  "SOLO",
-  "FAMILY_YOUNG_KIDS",
-  "FAMILY_TEENS",
-  "GROUP_FRIENDS",
-  "MULTI_GEN",
-  "HONEYMOON",
-  "ANNIVERSARY",
-]
-
-function parseJsonArray(value: any): string[] {
-  if (!value) return []
-  if (Array.isArray(value)) return value
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value)
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
-    }
-  }
-  return []
-}
-
-function formatLabel(value: string): string {
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-export function TemplateFormDialog({ template, trigger }: TemplateFormDialogProps) {
-  const isEditing = !!template
+export function TemplateFormDialog({ template, trigger }: Props) {
+  const isEdit = !!template
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const existingStyles = parseJsonArray(template?.travelStyles)
-  const existingTypes = parseJsonArray(template?.travelerTypes)
-  const existingHighlights = parseJsonArray(template?.highlights)
-  const existingIncludes = parseJsonArray(template?.includes)
-  const existingExcludes = parseJsonArray(template?.excludes)
+  const [title, setTitle] = useState(template?.title || "")
+  const [destination, setDestination] = useState(template?.destination || "")
+  const [country, setCountry] = useState(template?.country || "")
+  const [flagEmoji, setFlagEmoji] = useState(template?.flagEmoji || "")
+  const [summary, setSummary] = useState(template?.summary || "")
+  const [description, setDescription] = useState(template?.description || "")
+  const [durationDays, setDurationDays] = useState(template?.durationDays || 7)
+  const [basePrice, setBasePrice] = useState(template?.basePrice || "")
+  const [styles, setStyles] = useState<string[]>(parseJson(template?.travelStyles, []))
+  const [types, setTypes] = useState<string[]>(parseJson(template?.travelerTypes, []))
+  const [budget, setBudget] = useState(template?.budgetLevel || "FIVE_TO_10K")
+  const [pace, setPace] = useState(template?.paceLevel || "moderate")
+  const [isFeatured, setIsFeatured] = useState(template?.isFeatured || false)
+  const [isBestSeller, setIsBestSeller] = useState(template?.isBestSeller || false)
+  const [isSignature, setIsSignature] = useState(template?.isSignature || false)
+  const [highlights, setHighlights] = useState(parseJson(template?.highlights, []).join("\n"))
+  const [includes, setIncludes] = useState(parseJson(template?.includes, []).join("\n"))
 
-  const [title, setTitle] = useState(template?.title ?? "")
-  const [destination, setDestination] = useState(template?.destination ?? "")
-  const [country, setCountry] = useState(template?.country ?? "")
-  const [region, setRegion] = useState(template?.region ?? "")
-  const [flagEmoji, setFlagEmoji] = useState(template?.flagEmoji ?? "")
-  const [summary, setSummary] = useState(template?.summary ?? "")
-  const [description, setDescription] = useState(template?.description ?? "")
-  const [durationDays, setDurationDays] = useState<number>(template?.durationDays ?? 7)
-  const [budgetLevel, setBudgetLevel] = useState(template?.budgetLevel ?? "")
-  const [paceLevel, setPaceLevel] = useState(template?.paceLevel ?? "")
-  const [travelStyles, setTravelStyles] = useState<string[]>(existingStyles)
-  const [travelerTypes, setTravelerTypes] = useState<string[]>(existingTypes)
-  const [isFeatured, setIsFeatured] = useState(template?.isFeatured ?? false)
-  const [isBestSeller, setIsBestSeller] = useState(template?.isBestSeller ?? false)
-  const [isSignature, setIsSignature] = useState(template?.isSignature ?? false)
-  const [basePrice, setBasePrice] = useState<string>(template?.basePrice?.toString() ?? "")
-  const [highlights, setHighlights] = useState(existingHighlights.join("\n"))
-  const [includes, setIncludes] = useState(existingIncludes.join("\n"))
-  const [excludes, setExcludes] = useState(existingExcludes.join("\n"))
+  const toggleChip = (arr: string[], setArr: (v: string[]) => void, val: string) => {
+    setArr(arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val])
+  }
 
-  function toggleArrayItem(arr: string[], item: string, setter: (v: string[]) => void) {
-    if (arr.includes(item)) {
-      setter(arr.filter((i) => i !== item))
-    } else {
-      setter([...arr, item])
+  const handleSubmit = async () => {
+    if (!title.trim() || !destination.trim()) {
+      toast.error("Title and destination are required")
+      return
     }
-  }
-
-  function splitLines(text: string): string[] {
-    return text
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean)
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
     setLoading(true)
-
     try {
       const input = {
-        title,
-        destination,
-        country,
-        region: region || undefined,
+        title, destination,
+        country: country || destination.split(",")[0].trim(),
         flagEmoji: flagEmoji || undefined,
-        summary,
-        description,
-        durationDays,
-        budgetLevel,
-        paceLevel,
-        travelStyles,
-        travelerTypes,
-        isFeatured,
-        isBestSeller,
-        isSignature,
-        basePrice: basePrice ? parseFloat(basePrice) : undefined,
-        highlights: splitLines(highlights),
-        includes: splitLines(includes),
-        excludes: splitLines(excludes).length > 0 ? splitLines(excludes) : undefined,
+        summary: summary || `${destination} — ${durationDays} day itinerary`,
+        description: description || summary || "",
+        durationDays: Number(durationDays),
+        travelStyles: styles,
+        travelerTypes: types,
+        budgetLevel: budget,
+        paceLevel: pace,
+        isFeatured, isBestSeller, isSignature,
+        highlights: highlights.split("\n").filter(Boolean),
+        includes: includes.split("\n").filter(Boolean),
+        basePrice: basePrice ? Number(basePrice) : undefined,
       }
-
-      if (isEditing) {
+      if (isEdit) {
         await updateTemplate(template.id, input)
-        toast.success("Template updated successfully")
+        toast.success("Template updated")
       } else {
         await createTemplate(input)
-        toast.success("Template created successfully")
+        toast.success("Template created")
       }
-
       setOpen(false)
     } catch {
       toast.error("Something went wrong")
@@ -180,317 +104,123 @@ export function TemplateFormDialog({ template, trigger }: TemplateFormDialogProp
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button variant="navy" className="gap-2"><Plus className="h-4 w-4" />New Template</Button>}
+        {trigger || <Button variant="navy"><Plus className="w-4 h-4 mr-1" /> New Template</Button>}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            {isEditing ? "Edit Template" : "Create New Template"}
-          </DialogTitle>
+          <DialogTitle className="text-lg font-serif">{isEdit ? "Edit Template" : "New Template"}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 pt-2">
-          {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title" className="text-base font-medium">
-              Title
-            </Label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Romantic Paris Getaway"
-              className="h-12 text-base"
-              required
-            />
+        <div className="space-y-5 pt-1">
+          {/* Name + destination */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Template Name *</Label>
+            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Paris & Provence Slow Luxury" className="text-base h-11" />
           </div>
 
-          {/* Destination / Country / Region row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="destination" className="text-base font-medium">
-                Destination
-              </Label>
-              <Input
-                id="destination"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="e.g. Paris"
-                className="h-12 text-base"
-                required
-              />
+          <div className="grid grid-cols-4 gap-3">
+            <div className="col-span-2">
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Destination *</Label>
+              <Input value={destination} onChange={e => setDestination(e.target.value)} placeholder="e.g., Paris & Provence" className="text-base" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="country" className="text-base font-medium">
-                Country
-              </Label>
-              <Input
-                id="country"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                placeholder="e.g. France"
-                className="h-12 text-base"
-                required
-              />
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Country</Label>
+              <Input value={country} onChange={e => setCountry(e.target.value)} placeholder="France" className="text-base" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="region" className="text-base font-medium">
-                Region <span className="text-gray-400 text-sm">(optional)</span>
-              </Label>
-              <Input
-                id="region"
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-                placeholder="e.g. Ile-de-France"
-                className="h-12 text-base"
-              />
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Flag</Label>
+              <Input value={flagEmoji} onChange={e => setFlagEmoji(e.target.value)} placeholder="🇫🇷" className="text-base text-center" />
             </div>
           </div>
 
-          {/* Flag Emoji / Duration row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="flagEmoji" className="text-base font-medium">
-                Flag Emoji
-              </Label>
-              <Input
-                id="flagEmoji"
-                value={flagEmoji}
-                onChange={(e) => setFlagEmoji(e.target.value)}
-                placeholder="e.g. \uD83C\uDDEB\uD83C\uDDF7"
-                className="h-12 text-base w-24"
-              />
+          {/* Duration + price */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Duration (days)</Label>
+              <Input type="number" min={1} value={durationDays} onChange={e => setDurationDays(e.target.value)} className="text-base" />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="durationDays" className="text-base font-medium">
-                Duration (days)
-              </Label>
-              <Input
-                id="durationDays"
-                type="number"
-                min={1}
-                value={durationDays}
-                onChange={(e) => setDurationDays(parseInt(e.target.value) || 1)}
-                className="h-12 text-base"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="basePrice" className="text-base font-medium">
-                Base Price <span className="text-gray-400 text-sm">(optional)</span>
-              </Label>
-              <Input
-                id="basePrice"
-                type="number"
-                min={0}
-                step={0.01}
-                value={basePrice}
-                onChange={(e) => setBasePrice(e.target.value)}
-                placeholder="e.g. 4500"
-                className="h-12 text-base"
-              />
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Starting Price ($)</Label>
+              <Input type="number" value={basePrice} onChange={e => setBasePrice(e.target.value)} placeholder="Optional" className="text-base" />
             </div>
           </div>
 
-          {/* Summary */}
-          <div className="space-y-2">
-            <Label htmlFor="summary" className="text-base font-medium">
-              Summary
-            </Label>
-            <Textarea
-              id="summary"
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              placeholder="A brief overview of this itinerary..."
-              className="min-h-[80px] text-base"
-              required
-            />
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-base font-medium">
-              Description
-            </Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Full description of the template..."
-              className="min-h-[120px] text-base"
-              required
-            />
-          </div>
-
-          {/* Budget Level / Pace Level */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-base font-medium">Budget Level</Label>
-              <Select value={budgetLevel} onValueChange={setBudgetLevel} required>
-                <SelectTrigger className="h-12 text-base">
-                  <SelectValue placeholder="Select budget level" />
-                </SelectTrigger>
-                <SelectContent>
-                  {BUDGET_LEVELS.map((b) => (
-                    <SelectItem key={b.value} value={b.value}>
-                      {b.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-base font-medium">Pace Level</Label>
-              <Select value={paceLevel} onValueChange={setPaceLevel} required>
-                <SelectTrigger className="h-12 text-base">
-                  <SelectValue placeholder="Select pace" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PACE_LEVELS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Travel Styles */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium">Travel Styles</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {TRAVEL_STYLES.map((style) => (
-                <label
-                  key={style}
-                  className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50 transition-colors"
-                >
-                  <Checkbox
-                    checked={travelStyles.includes(style)}
-                    onCheckedChange={() =>
-                      toggleArrayItem(travelStyles, style, setTravelStyles)
-                    }
-                  />
-                  <span className="text-sm font-medium">{formatLabel(style)}</span>
-                </label>
+          {/* Travel styles — chips */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">Travel Style</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {TRAVEL_STYLES.map(s => (
+                <button key={s} type="button" onClick={() => toggleChip(styles, setStyles, s)}
+                  className={`text-xs rounded-full px-3 py-1.5 font-medium transition-colors ${styles.includes(s) ? "bg-primary-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                >{s}</button>
               ))}
             </div>
           </div>
 
-          {/* Traveler Types */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium">Traveler Types</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {TRAVELER_TYPES.map((type) => (
-                <label
-                  key={type}
-                  className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50 transition-colors"
-                >
-                  <Checkbox
-                    checked={travelerTypes.includes(type)}
-                    onCheckedChange={() =>
-                      toggleArrayItem(travelerTypes, type, setTravelerTypes)
-                    }
-                  />
-                  <span className="text-sm font-medium">{formatLabel(type)}</span>
-                </label>
+          {/* Traveler types — chips */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-2 block">Best For</Label>
+            <div className="flex flex-wrap gap-1.5">
+              {TRAVELER_TYPES.map(t => (
+                <button key={t} type="button" onClick={() => toggleChip(types, setTypes, t)}
+                  className={`text-xs rounded-full px-3 py-1.5 font-medium transition-colors ${types.includes(t) ? "bg-primary-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                >{t.replace(/_/g, " ")}</button>
               ))}
             </div>
           </div>
 
-          {/* Switches */}
-          <div className="space-y-4 rounded-lg border p-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="isFeatured" className="text-base font-medium cursor-pointer">
-                Featured
-              </Label>
-              <Switch
-                id="isFeatured"
-                checked={isFeatured}
-                onCheckedChange={setIsFeatured}
-              />
+          {/* Budget + Pace — pill selectors */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">Budget Tier</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {BUDGET_LEVELS.map(b => (
+                  <button key={b.value} type="button" onClick={() => setBudget(b.value)}
+                    className={`text-xs rounded-full px-3 py-1.5 font-medium transition-colors ${budget === b.value ? "bg-primary-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                  >{b.label}</button>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="isBestSeller" className="text-base font-medium cursor-pointer">
-                Best Seller
-              </Label>
-              <Switch
-                id="isBestSeller"
-                checked={isBestSeller}
-                onCheckedChange={setIsBestSeller}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="isSignature" className="text-base font-medium cursor-pointer">
-                Signature
-              </Label>
-              <Switch
-                id="isSignature"
-                checked={isSignature}
-                onCheckedChange={setIsSignature}
-              />
+            <div>
+              <Label className="text-sm font-medium text-gray-700 mb-2 block">Pace</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {PACE_LEVELS.map(p => (
+                  <button key={p.value} type="button" onClick={() => setPace(p.value)}
+                    className={`text-xs rounded-full px-3 py-1.5 font-medium transition-colors ${pace === p.value ? "bg-primary-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                  >{p.label}</button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Highlights */}
-          <div className="space-y-2">
-            <Label htmlFor="highlights" className="text-base font-medium">
-              Highlights <span className="text-gray-400 text-sm">(one per line)</span>
-            </Label>
-            <Textarea
-              id="highlights"
-              value={highlights}
-              onChange={(e) => setHighlights(e.target.value)}
-              placeholder={"Private Eiffel Tower dinner\nSeine River cruise\nVersailles day trip"}
-              className="min-h-[100px] text-base"
-            />
+          {/* Summary — single textarea */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Summary</Label>
+            <Textarea value={summary} onChange={e => setSummary(e.target.value)} placeholder="Brief description of this trip..." className="h-16 text-base" />
           </div>
 
-          {/* Includes */}
-          <div className="space-y-2">
-            <Label htmlFor="includes" className="text-base font-medium">
-              Includes <span className="text-gray-400 text-sm">(one per line)</span>
-            </Label>
-            <Textarea
-              id="includes"
-              value={includes}
-              onChange={(e) => setIncludes(e.target.value)}
-              placeholder={"Luxury hotel accommodation\nPrivate transfers\nDaily breakfast"}
-              className="min-h-[100px] text-base"
-            />
+          {/* Highlights — one per line */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Highlights</Label>
+            <Textarea value={highlights} onChange={e => setHighlights(e.target.value)} placeholder={"Private Louvre tour\nMichelin dining\nWine tasting in Provence"} className="h-20 text-sm" />
+            <p className="text-xs text-gray-400 mt-1">One per line</p>
           </div>
 
-          {/* Excludes */}
-          <div className="space-y-2">
-            <Label htmlFor="excludes" className="text-base font-medium">
-              Excludes{" "}
-              <span className="text-gray-400 text-sm">(one per line, optional)</span>
-            </Label>
-            <Textarea
-              id="excludes"
-              value={excludes}
-              onChange={(e) => setExcludes(e.target.value)}
-              placeholder={"International flights\nTravel insurance"}
-              className="min-h-[80px] text-base"
-            />
+          {/* Toggles */}
+          <div className="flex items-center gap-6">
+            <label className="flex items-center gap-2 cursor-pointer"><Switch checked={isSignature} onCheckedChange={setIsSignature} /><span className="text-sm text-gray-700">Signature</span></label>
+            <label className="flex items-center gap-2 cursor-pointer"><Switch checked={isBestSeller} onCheckedChange={setIsBestSeller} /><span className="text-sm text-gray-700">Best Seller</span></label>
+            <label className="flex items-center gap-2 cursor-pointer"><Switch checked={isFeatured} onCheckedChange={setIsFeatured} /><span className="text-sm text-gray-700">Featured</span></label>
           </div>
 
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              className="h-12 px-6 text-base"
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading} className="h-12 px-8 text-base">
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Create Template"}
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="navy" onClick={handleSubmit} disabled={loading} className="min-w-[120px]">
+              {loading ? "Saving..." : isEdit ? "Save Changes" : "Create Template"}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   )
