@@ -15,22 +15,20 @@ export default function SurveyStartPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sand-50 to-white pt-20">
-      <div className="max-w-2xl mx-auto px-4 py-16">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-700 rounded-full mb-6">
-            <Compass className="w-8 h-8 text-white" />
+    <div className="min-h-screen bg-sand-50 pt-16">
+      {/* Hero banner */}
+      <div className="relative h-48 sm:h-56 overflow-hidden">
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/backgrounds/landmark.jpg')" }} />
+        <div className="absolute inset-0 bg-primary-900/70" />
+        <div className="relative z-10 h-full flex items-center justify-center text-white text-center px-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-serif font-bold mb-2">Let&apos;s build your perfect trip</h1>
+            <p className="text-primary-200 text-sm sm:text-base">Tell us about you — it takes about 10 minutes</p>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-serif font-bold text-primary-900 mb-4">
-            Let's build your perfect trip
-          </h1>
-          <p className="text-gray-600 text-lg leading-relaxed">
-            This survey helps us understand you as a traveler — your pace, your passions,
-            and what you want to feel. It takes about 10 minutes.
-          </p>
         </div>
+      </div>
 
+      <div className="max-w-2xl mx-auto px-4 py-10">
         {/* What to expect */}
         <div className="bg-white rounded-2xl border border-sand-200 p-8 mb-8 shadow-sm">
           <h3 className="font-semibold text-primary-800 mb-4">What we'll ask about:</h3>

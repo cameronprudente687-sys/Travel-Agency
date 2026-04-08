@@ -45,8 +45,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden">
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/backgrounds/city-london.jpg')" }} />
+      <div className="absolute inset-0 bg-primary-900/75" />
+      <div className="relative z-10 w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-primary-700 rounded-full mb-4">

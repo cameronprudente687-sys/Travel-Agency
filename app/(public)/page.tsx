@@ -47,13 +47,10 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen">
       {/* Hero */}
-      <section className="relative min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 flex items-center justify-center text-white pt-16">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 25% 25%, rgba(201,168,76,0.3) 0%, transparent 50%),
-                              radial-gradient(circle at 75% 75%, rgba(201,168,76,0.3) 0%, transparent 50%)`
-          }} />
-        </div>
+      <section className="relative min-h-screen flex items-center justify-center text-white pt-16 overflow-hidden">
+        {/* Background image */}
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/backgrounds/resort.jpg')" }} />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary-900/80 via-primary-900/65 to-primary-900/85" />
 
         <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center py-24">
           <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-1.5 mb-8 text-sm text-gold-300 border border-white/20">
@@ -262,8 +259,10 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 bg-gradient-to-r from-primary-800 to-primary-900 text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className="relative py-24 text-white overflow-hidden">
+        <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/backgrounds/beach.jpg')" }} />
+        <div className="absolute inset-0 bg-primary-900/80" />
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-serif font-bold mb-4">
             Ready to stop planning and start traveling?
           </h2>

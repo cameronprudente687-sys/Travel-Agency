@@ -73,7 +73,7 @@ export default function SetupPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 flex items-center justify-center">
+      <div className="relative min-h-screen flex items-center justify-center">
         <div className="text-white text-center">
           <Compass className="w-8 h-8 animate-spin mx-auto mb-4" />
           <p>Checking setup status...</p>
@@ -84,7 +84,7 @@ export default function SetupPage() {
 
   if (!allowed) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 flex items-center justify-center px-4">
+      <div className="relative min-h-screen flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
           <ShieldCheck className="w-12 h-12 text-green-500 mx-auto mb-4" />
           <h1 className="text-xl font-serif font-bold text-primary-900 mb-2">Setup Already Complete</h1>
@@ -96,7 +96,7 @@ export default function SetupPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 flex items-center justify-center px-4">
+      <div className="relative min-h-screen flex items-center justify-center px-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
           <ShieldCheck className="w-12 h-12 text-green-500 mx-auto mb-4" />
           <h1 className="text-xl font-serif font-bold text-primary-900 mb-2">Account Created</h1>
@@ -107,8 +107,10 @@ export default function SetupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700 flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden">
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/backgrounds/resort.jpg')" }} />
+      <div className="absolute inset-0 bg-primary-900/75" />
+      <div className="relative z-10 w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-primary-700 rounded-full mb-4">
