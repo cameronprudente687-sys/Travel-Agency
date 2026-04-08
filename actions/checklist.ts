@@ -23,9 +23,11 @@ export async function createChecklistItem(portalId: string, data: {
       sortOrder: data.sortOrder ?? count,
       isCustomerVisible: data.isCustomerVisible ?? true,
       isRequired: data.isRequired ?? false,
+      isGenerated: false, // custom item
     },
   })
   revalidatePath(`/my-trip`)
+  revalidatePath(`/leads`)
 }
 
 export async function updateChecklistItem(id: string, data: {
@@ -36,13 +38,31 @@ export async function updateChecklistItem(id: string, data: {
   isCustomerVisible?: boolean
   isRequired?: boolean
 }) {
-  await db.checklistItem.update({ where: { id }, data })
+  // When an item is edited, mark it as no longer auto-generated
+  // so it's protected from regeneration
+  await db.checklistItem.update({
+    where: { id },
+    data: { ...data, isGenerated: false },
+  })
   revalidatePath(`/my-trip`)
+  revalidatePath(`/leads`)
 }
 
 export async function deleteChecklistItem(id: string) {
   await db.checklistItem.delete({ where: { id } })
   revalidatePath(`/my-trip`)
+  revalidatePath(`/leads`)
+}
+
+export async function reorderChecklistItems(items: { id: string; sortOrder: number }[]) {
+  for (const item of items) {
+    await db.checklistItem.update({
+      where: { id: item.id },
+      data: { sortOrder: item.sortOrder },
+    })
+  }
+  revalidatePath(`/my-trip`)
+  revalidatePath(`/leads`)
 }
 
 export async function toggleChecklistCompletion(itemId: string, userId: string, completed: boolean, notes?: string) {
@@ -80,12 +100,18 @@ export async function applyChecklistTemplate(portalId: string, templateId: strin
         dayNumber: items[i].dayNumber || null,
         sortOrder: existingCount + i,
         isCustomerVisible: true,
+        isGenerated: true,
       },
     })
   }
   revalidatePath(`/my-trip`)
+  revalidatePath(`/leads`)
 }
 
+/**
+ * Safe regeneration: only replaces untouched generated items.
+ * Custom items and edited items (isGenerated=false) are preserved.
+ */
 export async function generateChecklistFromItinerary(portalId: string) {
   const portal = await db.clientPortalPage.findUnique({
     where: { id: portalId },
@@ -94,7 +120,19 @@ export async function generateChecklistFromItinerary(portalId: string) {
   if (!portal?.proposal?.version) return
 
   const itinerary = JSON.parse(portal.proposal.version.itinerary || "[]") as any[]
-  const existingCount = await db.checklistItem.count({ where: { portalId } })
+
+  // Delete only auto-generated items (preserves custom + edited items)
+  await db.checklistItem.deleteMany({
+    where: { portalId, isGenerated: true },
+  })
+
+  // Get current max sortOrder from remaining custom items
+  const remaining = await db.checklistItem.findMany({
+    where: { portalId },
+    orderBy: { sortOrder: "desc" },
+    take: 1,
+  })
+  let sortOrder = remaining.length > 0 ? remaining[0].sortOrder + 1 : 0
 
   // Add pre-trip items
   const preTripItems = [
@@ -105,10 +143,12 @@ export async function generateChecklistFromItinerary(portalId: string) {
     { title: "Packing complete", category: "PRE_TRIP" },
   ]
 
-  let sortOrder = existingCount
   for (const item of preTripItems) {
     await db.checklistItem.create({
-      data: { portalId, title: item.title, category: item.category, sortOrder: sortOrder++, isCustomerVisible: true },
+      data: {
+        portalId, title: item.title, category: item.category,
+        sortOrder: sortOrder++, isCustomerVisible: true, isGenerated: true,
+      },
     })
   }
 
@@ -124,9 +164,11 @@ export async function generateChecklistFromItinerary(portalId: string) {
         dayNumber: dayNum,
         sortOrder: sortOrder++,
         isCustomerVisible: true,
+        isGenerated: true,
       },
     })
   }
 
   revalidatePath(`/my-trip`)
+  revalidatePath(`/leads`)
 }

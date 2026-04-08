@@ -254,6 +254,7 @@ model ChecklistItem {
 
   isCustomerVisible Boolean @default(true)
   isRequired        Boolean @default(false)
+  isGenerated       Boolean @default(false) // true if auto-generated, false if custom/edited
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
