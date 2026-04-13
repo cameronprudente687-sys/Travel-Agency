@@ -15,8 +15,8 @@ export function Footer() {
               <span className="text-xl font-serif font-semibold">Voyagr</span>
             </div>
             <p className="text-primary-200 text-sm leading-relaxed max-w-xs">
-              Tailored travel, built around the traveler. We design journeys that
-              reflect who you are, not just where you want to go.
+              Personalized travel planning built around you — your pace,
+              your style, and what makes a trip feel unforgettable.
             </p>
             <div className="flex gap-4 mt-6">
               <a href="#" className="text-primary-300 hover:text-gold-400 transition-colors">
@@ -68,12 +68,11 @@ export function Footer() {
 
         <div className="mt-12 pt-6 border-t border-primary-800 flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-xs text-primary-400">
-            © 2024 Voyagr Travel. All rights reserved.
+            &copy; {new Date().getFullYear()} Voyagr Travel. All rights reserved.
           </p>
-          <div className="flex gap-6">
-            <Link href="#" className="text-xs text-primary-400 hover:text-primary-200 transition-colors">Privacy Policy</Link>
-            <Link href="#" className="text-xs text-primary-400 hover:text-primary-200 transition-colors">Terms of Service</Link>
-          </div>
+          <p className="text-xs text-primary-500">
+            Website created by Cameron Prudente
+          </p>
         </div>
       </div>
     </footer>
