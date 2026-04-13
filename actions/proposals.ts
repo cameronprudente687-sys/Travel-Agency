@@ -141,3 +141,50 @@ export async function generateProposalFromVersion(leadId: string, versionId: str
   revalidatePath("/proposals")
   return proposal
 }
+
+/**
+ * One-click: generate proposal from version + create portal + publish.
+ */
+export async function publishTripFromVersion(leadId: string, versionId: string, clientFirstName: string) {
+  const lead = await db.customerLead.findUnique({ where: { id: leadId } })
+  if (!lead) throw new Error("Lead not found")
+
+  let proposal = await db.proposal.findFirst({ where: { versionId } })
+  if (!proposal) {
+    proposal = await generateProposalFromVersion(leadId, versionId, clientFirstName)
+  }
+
+  const slug = slugify(`${lead.firstName}-${proposal.title}`.toLowerCase().slice(0, 50)) + `-${Date.now().toString(36)}`
+
+  await db.clientPortalPage.upsert({
+    where: { leadId },
+    update: {
+      proposalId: proposal.id,
+      title: proposal.title,
+      welcomeMessage: proposal.introMessage.slice(0, 300),
+      tripHighlights: proposal.inclusions,
+      portalStatus: "PUBLISHED",
+      publishedAt: new Date(),
+      isActive: true,
+    },
+    create: {
+      leadId,
+      proposalId: proposal.id,
+      slug,
+      title: proposal.title,
+      welcomeMessage: proposal.introMessage.slice(0, 300),
+      tripHighlights: proposal.inclusions,
+      portalStatus: "PUBLISHED",
+      publishedAt: new Date(),
+      isActive: true,
+    },
+  })
+
+  await db.proposal.update({
+    where: { id: proposal.id },
+    data: { status: "SENT", sentAt: new Date() },
+  })
+
+  revalidatePath(`/leads/${leadId}`)
+  return proposal
+}

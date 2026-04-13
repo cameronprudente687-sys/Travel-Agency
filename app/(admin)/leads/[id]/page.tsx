@@ -2,7 +2,6 @@ import { notFound } from "next/navigation"
 import { db } from "@/lib/db"
 import { AdminHeader } from "@/components/layout/AdminHeader"
 import { LeadStatusSelect } from "@/components/admin/LeadStatusSelect"
-import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDate, formatCurrency, parseJsonField } from "@/lib/utils"
 import {
@@ -13,12 +12,10 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ItineraryBuilder } from "@/components/admin/ItineraryBuilder"
 import { VersionActions } from "@/components/admin/VersionActions"
-import { ProposalFormDialog } from "@/components/admin/ProposalFormDialog"
 import { VersionComparison } from "@/components/admin/VersionComparison"
 import { AddNoteForm } from "@/components/admin/AddNoteForm"
 import { PortalControls } from "@/components/admin/PortalControls"
 import { WorkflowGuide } from "@/components/admin/WorkflowGuide"
-import { ProposalActions } from "@/components/admin/ProposalActions"
 
 export default async function LeadDetailPage({ params }: { params: { id: string } }) {
   const lead = await db.customerLead.findUnique({
@@ -63,7 +60,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
   const activitiesRec = parseJsonField<string[]>(aiSummary?.activitiesRecommended, [])
   const avoidPatterns = parseJsonField<string[]>(aiSummary?.avoidPatterns, [])
 
-  const versionOptions = lead.tripVersions.map(v => ({ id: v.id, title: v.title, versionNumber: v.versionNumber }))
+
 
   return (
     <div className="flex flex-col min-h-full">
@@ -94,7 +91,6 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             </div>
             <div className="flex gap-2 flex-wrap">
               <ItineraryBuilder leadId={lead.id} templates={itineraryTemplates} />
-              <ProposalFormDialog leadId={lead.id} versions={versionOptions} />
               {lead.portalPage && (
                 <Button asChild variant="outline" size="sm">
                   <Link href={`/portal/${lead.portalPage.slug}`} target="_blank">View Portal</Link>
@@ -150,7 +146,6 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
         <WorkflowGuide
           hasSurvey={!!lead.survey}
           hasVersions={lead.tripVersions.length > 0}
-          hasProposals={lead.proposals.length > 0}
           hasPortal={!!lead.portalPage}
           portalPublished={lead.portalPage?.portalStatus === "PUBLISHED"}
           hasCustomerAccount={!!customerAccount}
@@ -162,7 +157,6 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             <TabsTrigger value="survey">Survey</TabsTrigger>
             {aiSummary && <TabsTrigger value="ai-summary">AI Summary</TabsTrigger>}
             <TabsTrigger value="versions">Versions ({lead.tripVersions.length})</TabsTrigger>
-            <TabsTrigger value="proposals">Proposals ({lead.proposals.length})</TabsTrigger>
             <TabsTrigger value="notes">Notes ({lead.leadNotes.length})</TabsTrigger>
             <TabsTrigger value="portal">Portal</TabsTrigger>
           </TabsList>
@@ -415,55 +409,6 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
             </div>
           </TabsContent>
 
-          {/* Proposals Tab */}
-          <TabsContent value="proposals" className="mt-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <ProposalFormDialog leadId={lead.id} versions={versionOptions} />
-              </div>
-              {lead.proposals.map(proposal => (
-                <div key={proposal.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-900">{proposal.title}</h3>
-                        <Badge variant={
-                          proposal.status === 'ACCEPTED' ? 'success' :
-                          proposal.status === 'SENT' ? 'gold' :
-                          proposal.status === 'DECLINED' ? 'error' : 'secondary'
-                        }>{proposal.status}</Badge>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1">{proposal.introMessage?.slice(0, 120)}...</p>
-                      <div className="text-xs text-gray-400 mt-2">
-                        {proposal.sentAt ? `Sent ${formatDate(proposal.sentAt)}` : 'Draft — not sent'}
-                      </div>
-                    </div>
-                    <div className="flex gap-2 flex-wrap">
-                      <ProposalActions
-                        proposalId={proposal.id}
-                        leadId={lead.id}
-                        hasPortal={!!lead.portalPage}
-                        portalSlug={lead.portalPage?.slug}
-                      />
-                      <ProposalFormDialog
-                        leadId={lead.id}
-                        proposal={proposal}
-                        versions={versionOptions}
-                        trigger={<Button variant="outline" size="sm"><Edit className="w-4 h-4 mr-1" /> Edit</Button>}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {lead.proposals.length === 0 && (
-                <div className="bg-white rounded-xl border border-dashed border-gray-200 p-12 text-center">
-                  <FileText className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 mb-3">No proposals yet</p>
-                  <ProposalFormDialog leadId={lead.id} versions={versionOptions} />
-                </div>
-              )}
-            </div>
-          </TabsContent>
 
           {/* Notes Tab */}
           <TabsContent value="notes" className="mt-4">

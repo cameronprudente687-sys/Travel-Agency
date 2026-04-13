@@ -1,11 +1,10 @@
 "use client"
 
-import { CheckCircle, Circle, ClipboardList, Map, FileText, Globe, UserPlus } from "lucide-react"
+import { CheckCircle, Circle, ClipboardList, Map, Globe, UserPlus } from "lucide-react"
 
 interface Props {
   hasSurvey: boolean
   hasVersions: boolean
-  hasProposals: boolean
   hasPortal: boolean
   portalPublished: boolean
   hasCustomerAccount: boolean
@@ -14,16 +13,14 @@ interface Props {
 const steps = [
   { key: "survey", label: "Review Survey", desc: "Check traveler preferences and AI summary", icon: ClipboardList },
   { key: "itinerary", label: "Build Itinerary", desc: "Create a trip version with the visual builder", icon: Map },
-  { key: "proposal", label: "Generate Proposal", desc: "Auto-generate a proposal from the itinerary", icon: FileText },
-  { key: "portal", label: "Publish Portal", desc: "Make the trip visible to your customer", icon: Globe },
-  { key: "account", label: "Create Customer Login", desc: "Grant your customer access to their trip", icon: UserPlus },
+  { key: "portal", label: "Publish Trip", desc: "Click 'Publish Trip' on a version to share it with your customer", icon: Globe },
+  { key: "account", label: "Create Customer Login", desc: "Grant your customer access to view their trip", icon: UserPlus },
 ]
 
-export function WorkflowGuide({ hasSurvey, hasVersions, hasProposals, hasPortal, portalPublished, hasCustomerAccount }: Props) {
+export function WorkflowGuide({ hasSurvey, hasVersions, hasPortal, portalPublished, hasCustomerAccount }: Props) {
   const completed = [
     hasSurvey,
     hasVersions,
-    hasProposals,
     hasPortal && portalPublished,
     hasCustomerAccount,
   ]

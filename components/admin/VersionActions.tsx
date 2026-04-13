@@ -2,9 +2,9 @@
 
 import { useTransition } from "react"
 import { Button } from "@/components/ui/button"
-import { generateProposalFromVersion } from "@/actions/proposals"
+import { publishTripFromVersion } from "@/actions/proposals"
 import { duplicateVersion, deleteVersion } from "@/actions/versions"
-import { FileText, Copy, Trash2 } from "lucide-react"
+import { Globe, Copy, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog"
 
@@ -18,13 +18,13 @@ interface Props {
 export function VersionActions({ version, leadId, leadFirstName, hasProposal }: Props) {
   const [isPending, startTransition] = useTransition()
 
-  const handleGenerateProposal = () => {
+  const handlePublishTrip = () => {
     startTransition(async () => {
       try {
-        await generateProposalFromVersion(leadId, version.id, leadFirstName)
-        toast.success("Proposal generated from this itinerary")
+        await publishTripFromVersion(leadId, version.id, leadFirstName)
+        toast.success("Trip published to customer portal!")
       } catch (e: any) {
-        toast.error(e.message || "Failed to generate proposal")
+        toast.error(e.message || "Failed to publish trip")
       }
     })
   }
@@ -54,11 +54,9 @@ export function VersionActions({ version, leadId, leadFirstName, hasProposal }: 
 
   return (
     <div className="flex gap-1.5 flex-wrap">
-      {!hasProposal && (
-        <Button variant="navy" size="sm" onClick={handleGenerateProposal} disabled={isPending}>
-          <FileText className="w-3.5 h-3.5 mr-1" /> Generate Proposal
-        </Button>
-      )}
+      <Button variant="navy" size="sm" onClick={handlePublishTrip} disabled={isPending}>
+        <Globe className="w-3.5 h-3.5 mr-1" /> {hasProposal ? "Republish Trip" : "Publish Trip"}
+      </Button>
       <SaveAsTemplateDialog version={version} />
       <Button variant="outline" size="sm" onClick={handleDuplicate} disabled={isPending}>
         <Copy className="w-3.5 h-3.5 mr-1" /> Duplicate

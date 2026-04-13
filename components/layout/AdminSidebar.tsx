@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   Compass, LayoutDashboard, Users, Map, Star,
-  MapPin, FileText, Settings, BookOpen,
+  MapPin, Settings, BookOpen,
   LogOut
 } from "lucide-react"
 import { signOut } from "next-auth/react"
@@ -13,7 +13,6 @@ import { cn } from "@/lib/utils"
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Leads", href: "/leads", icon: Users },
-  { label: "Proposals", href: "/proposals", icon: FileText },
   { label: "Templates", href: "/templates", icon: Map },
   { label: "Past Trips", href: "/past-trips", icon: Star },
   { label: "Saved Places", href: "/places", icon: MapPin },
