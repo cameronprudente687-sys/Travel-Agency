@@ -25,7 +25,7 @@ export function Footer() {
               <a href="#" className="text-primary-300 hover:text-gold-400 transition-colors">
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="mailto:hello@voyagr.com" className="text-primary-300 hover:text-gold-400 transition-colors">
+              <a href="mailto:tamara.prudente@fora.travel" className="text-primary-300 hover:text-gold-400 transition-colors">
                 <Mail className="w-5 h-5" />
               </a>
             </div>
@@ -48,11 +48,11 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-sm text-primary-300">
                 <Mail className="w-4 h-4 text-gold-400 shrink-0" />
-                <a href="mailto:hello@voyagr.com" className="hover:text-white transition-colors">hello@voyagr.com</a>
+                <a href="mailto:tamara.prudente@fora.travel" className="hover:text-white transition-colors">tamara.prudente@fora.travel</a>
               </li>
               <li className="flex items-center gap-2 text-sm text-primary-300">
                 <Phone className="w-4 h-4 text-gold-400 shrink-0" />
-                <a href="tel:+18005551234" className="hover:text-white transition-colors">+1 (800) 555-1234</a>
+                <a href="tel:+15087286754" className="hover:text-white transition-colors">(508) 728-6754</a>
               </li>
             </ul>
             <div className="mt-6">

@@ -214,14 +214,14 @@ export default async function ClientPortalPage({ params }: { params: { slug: str
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a
-              href="mailto:hello@voyagr.com"
+              href="mailto:tamara.prudente@fora.travel"
               className="flex items-center gap-2 bg-gold-500 hover:bg-gold-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors"
             >
               <Mail className="w-4 h-4" />
               Email Your Advisor
             </a>
             <a
-              href="tel:+18005551234"
+              href="tel:+15087286754"
               className="flex items-center gap-2 bg-primary-700 hover:bg-primary-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition-colors"
             >
               <Phone className="w-4 h-4" />
