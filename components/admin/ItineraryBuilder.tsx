@@ -168,6 +168,18 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
     setDays(prev => prev.map(d => d.id === dayId ? { ...d, activities: d.activities.filter((_, i) => i !== idx) } : d))
   }
 
+  const addMeal = (dayId: string) => {
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, meals: [...d.meals, ""] } : d))
+  }
+
+  const updateMeal = (dayId: string, idx: number, value: string) => {
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, meals: d.meals.map((m, i) => i === idx ? value : m) } : d))
+  }
+
+  const removeMeal = (dayId: string, idx: number) => {
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, meals: d.meals.filter((_, i) => i !== idx) } : d))
+  }
+
   // ==================== HOTEL OPERATIONS ====================
 
   const addHotel = () => {
@@ -452,68 +464,69 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
                   </div>
 
                   {/* Day Body */}
-                  <div className="p-4 space-y-3">
+                  <div className="p-4 space-y-4">
+                    {/* Location + Description */}
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label className="text-xs text-gray-500 mb-1 block">Location</Label>
                         <Input value={day.location} onChange={e => updateDay(day.id, "location", e.target.value)} placeholder="e.g., Rome" className="text-sm" />
                       </div>
                       <div>
-                        <Label className="text-xs text-gray-500 mb-1 block flex items-center gap-1"><Hotel className="w-3 h-3" /> Accommodation</Label>
-                        <Input value={day.accommodation} onChange={e => updateDay(day.id, "accommodation", e.target.value)} placeholder="e.g., Hotel de Russie" className="text-sm" />
+                        <Label className="text-xs text-gray-500 mb-1 block">Description</Label>
+                        <Input value={day.description} onChange={e => updateDay(day.id, "description", e.target.value)} placeholder="What happens this day..." className="text-sm" />
                       </div>
                     </div>
 
-                    <div>
-                      <Label className="text-xs text-gray-500 mb-1 block">Description</Label>
-                      <Textarea value={day.description} onChange={e => updateDay(day.id, "description", e.target.value)} placeholder="What happens this day..." className="h-16 text-sm" />
+                    {/* HOTEL — clear dedicated section */}
+                    <div className="bg-primary-50/50 rounded-lg p-3 border border-primary-100">
+                      <Label className="text-xs text-primary-700 font-semibold mb-1.5 block flex items-center gap-1"><Hotel className="w-3.5 h-3.5" /> Where to Stay</Label>
+                      <Input value={day.accommodation} onChange={e => updateDay(day.id, "accommodation", e.target.value)} placeholder="Type a hotel name or use 'From Saved' below" className="text-sm mb-2" />
+                      <PlacePicker mode="hotel" onSelect={(p) => insertPlaceIntoDay(day.id, p)} trigger={
+                        <button type="button" className="text-xs text-primary-600 hover:text-primary-800 flex items-center gap-1"><Hotel className="w-3 h-3" /> From saved hotels</button>
+                      } />
                     </div>
 
-                    {/* Activities */}
-                    <div>
-                      <Label className="text-xs text-gray-500 mb-1 block flex items-center gap-1"><Sparkles className="w-3 h-3" /> Activities</Label>
+                    {/* RESTAURANTS — clear dedicated section */}
+                    <div className="bg-amber-50/50 rounded-lg p-3 border border-amber-100">
+                      <Label className="text-xs text-amber-700 font-semibold mb-1.5 block flex items-center gap-1"><Utensils className="w-3.5 h-3.5" /> Where to Eat</Label>
                       <div className="space-y-1.5">
-                        {day.activities.map((act, ai) => (
-                          <div key={ai} className="flex items-center gap-2">
-                            <Input
-                              value={act}
-                              onChange={e => updateActivity(day.id, ai, e.target.value)}
-                              placeholder="e.g., Private Colosseum tour"
-                              className="text-sm flex-1"
-                            />
-                            <button onClick={() => removeActivity(day.id, ai)} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-3.5 h-3.5" /></button>
+                        {day.meals.map((meal, mi) => (
+                          <div key={mi} className="flex items-center gap-2">
+                            <Input value={meal} onChange={e => updateMeal(day.id, mi, e.target.value)} placeholder="e.g., Da Enzo al 29" className="text-sm flex-1 bg-white" />
+                            <button onClick={() => removeMeal(day.id, mi)} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-3 h-3" /></button>
                           </div>
                         ))}
-                        <div className="flex gap-2 items-center">
-                          <button onClick={() => addActivity(day.id)} className="text-xs text-primary-600 hover:text-primary-800 flex items-center gap-1 py-1">
-                            <Plus className="w-3 h-3" /> Add custom
-                          </button>
-                          <PlacePicker mode="experience" onSelect={(p) => insertPlaceIntoDay(day.id, p)} trigger={
-                            <button type="button" className="text-xs text-gold-600 hover:text-gold-800 flex items-center gap-1 py-1">
-                              <Sparkles className="w-3 h-3" /> From saved
-                            </button>
+                        <div className="flex gap-3 items-center">
+                          <button onClick={() => addMeal(day.id)} className="text-xs text-amber-700 hover:text-amber-900 flex items-center gap-1 py-1"><Plus className="w-3 h-3" /> Add custom</button>
+                          <PlacePicker mode="dining" onSelect={(p) => insertPlaceIntoDay(day.id, p)} trigger={
+                            <button type="button" className="text-xs text-amber-600 hover:text-amber-800 flex items-center gap-1 py-1"><Utensils className="w-3 h-3" /> From saved</button>
                           } />
                         </div>
                       </div>
                     </div>
 
-                    {/* Quick-add saved places to this day */}
-                    <div className="flex gap-2 pt-2 border-t border-gray-100">
-                      <PlacePicker mode="hotel" onSelect={(p) => insertPlaceIntoDay(day.id, p)} trigger={
-                        <button type="button" className="text-xs bg-primary-50 text-primary-600 hover:bg-primary-100 rounded-lg px-2 py-1 flex items-center gap-1 transition-colors">
-                          <Hotel className="w-3 h-3" /> Add hotel
-                        </button>
-                      } />
-                      <PlacePicker mode="dining" onSelect={(p) => insertPlaceIntoDay(day.id, p)} trigger={
-                        <button type="button" className="text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg px-2 py-1 flex items-center gap-1 transition-colors">
-                          <Utensils className="w-3 h-3" /> Add restaurant
-                        </button>
-                      } />
+                    {/* ACTIVITIES — clear dedicated section */}
+                    <div className="bg-gold-50/30 rounded-lg p-3 border border-gold-100">
+                      <Label className="text-xs text-gold-700 font-semibold mb-1.5 block flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Activities & Experiences</Label>
+                      <div className="space-y-1.5">
+                        {day.activities.map((act, ai) => (
+                          <div key={ai} className="flex items-center gap-2">
+                            <Input value={act} onChange={e => updateActivity(day.id, ai, e.target.value)} placeholder="e.g., Private Colosseum tour" className="text-sm flex-1 bg-white" />
+                            <button onClick={() => removeActivity(day.id, ai)} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-3 h-3" /></button>
+                          </div>
+                        ))}
+                        <div className="flex gap-3 items-center">
+                          <button onClick={() => addActivity(day.id)} className="text-xs text-gold-700 hover:text-gold-900 flex items-center gap-1 py-1"><Plus className="w-3 h-3" /> Add custom</button>
+                          <PlacePicker mode="experience" onSelect={(p) => insertPlaceIntoDay(day.id, p)} trigger={
+                            <button type="button" className="text-xs text-gold-600 hover:text-gold-800 flex items-center gap-1 py-1"><Sparkles className="w-3 h-3" /> From saved</button>
+                          } />
+                        </div>
+                      </div>
                     </div>
 
                     {/* Transport */}
                     <div>
-                      <Label className="text-xs text-gray-500 mb-1 block flex items-center gap-1"><Train className="w-3 h-3" /> Transport Notes</Label>
+                      <Label className="text-xs text-gray-500 mb-1 block flex items-center gap-1"><Train className="w-3 h-3" /> Transport</Label>
                       <Input value={day.transportNotes} onChange={e => updateDay(day.id, "transportNotes", e.target.value)} placeholder="e.g., High-speed train from Rome, 2hrs" className="text-sm" />
                     </div>
                   </div>
