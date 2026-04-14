@@ -23,7 +23,7 @@ export async function createChecklistItem(portalId: string, data: {
       sortOrder: data.sortOrder ?? count,
       isCustomerVisible: data.isCustomerVisible ?? true,
       isRequired: data.isRequired ?? false,
-      isGenerated: false, // custom item
+      isGenerated: false,
     },
   })
   revalidatePath(`/my-trip`)
@@ -38,8 +38,6 @@ export async function updateChecklistItem(id: string, data: {
   isCustomerVisible?: boolean
   isRequired?: boolean
 }) {
-  // When an item is edited, mark it as no longer auto-generated
-  // so it's protected from regeneration
   await db.checklistItem.update({
     where: { id },
     data: { ...data, isGenerated: false },
@@ -73,9 +71,7 @@ export async function toggleChecklistCompletion(itemId: string, userId: string, 
       create: { itemId, userId, completed: true, notes },
     })
   } else {
-    await db.checklistCompletion.deleteMany({
-      where: { itemId, userId },
-    })
+    await db.checklistCompletion.deleteMany({ where: { itemId, userId } })
   }
   revalidatePath(`/my-trip`)
 }
@@ -100,7 +96,7 @@ export async function applyChecklistTemplate(portalId: string, templateId: strin
         dayNumber: items[i].dayNumber || null,
         sortOrder: existingCount + i,
         isCustomerVisible: true,
-        isGenerated: true,
+        isGenerated: false, // template items count as manual/custom
       },
     })
   }
@@ -109,8 +105,11 @@ export async function applyChecklistTemplate(portalId: string, templateId: strin
 }
 
 /**
- * Safe regeneration: only replaces untouched generated items.
- * Custom items and edited items (isGenerated=false) are preserved.
+ * Generate checklist from the published itinerary.
+ * - Extracts REAL items: hotels, activities, meals, transport per day
+ * - Adds standard pre-trip prep items
+ * - Only replaces isGenerated=true items (preserves manual additions)
+ * - Called automatically when a trip is published
  */
 export async function generateChecklistFromItinerary(portalId: string) {
   const portal = await db.clientPortalPage.findUnique({
@@ -119,54 +118,97 @@ export async function generateChecklistFromItinerary(portalId: string) {
   })
   if (!portal?.proposal?.version) return
 
-  const itinerary = JSON.parse(portal.proposal.version.itinerary || "[]") as any[]
+  const version = portal.proposal.version
+  const itinerary = JSON.parse(version.itinerary || "[]") as any[]
+  const hotels = JSON.parse(version.hotelIdeas || "[]") as any[]
+  const experiences = JSON.parse(version.experiences || "[]") as any[]
 
   // Delete only auto-generated items (preserves custom + edited items)
   await db.checklistItem.deleteMany({
     where: { portalId, isGenerated: true },
   })
 
-  // Get current max sortOrder from remaining custom items
+  // Get max sortOrder from remaining custom items
   const remaining = await db.checklistItem.findMany({
     where: { portalId },
     orderBy: { sortOrder: "desc" },
     take: 1,
   })
-  let sortOrder = remaining.length > 0 ? remaining[0].sortOrder + 1 : 0
+  let sort = remaining.length > 0 ? remaining[0].sortOrder + 1 : 0
 
-  // Add pre-trip items
-  const preTripItems = [
-    { title: "Passport verified and valid", category: "PRE_TRIP" },
-    { title: "Travel insurance confirmed", category: "PRE_TRIP" },
-    { title: "Flights booked and confirmed", category: "PRE_TRIP" },
-    { title: "Accommodations confirmed", category: "PRE_TRIP" },
-    { title: "Packing complete", category: "PRE_TRIP" },
-  ]
-
-  for (const item of preTripItems) {
+  // Helper to create a generated item
+  const add = async (title: string, category: string, dayNumber?: number, description?: string) => {
     await db.checklistItem.create({
       data: {
-        portalId, title: item.title, category: item.category,
-        sortOrder: sortOrder++, isCustomerVisible: true, isGenerated: true,
-      },
-    })
-  }
-
-  // Add day-by-day items from itinerary
-  for (const day of itinerary) {
-    const dayNum = day.day || day.dayNumber
-    await db.checklistItem.create({
-      data: {
-        portalId,
-        title: day.title || `Day ${dayNum}`,
-        description: day.description || null,
-        category: "DAY_ACTIVITY",
-        dayNumber: dayNum,
-        sortOrder: sortOrder++,
+        portalId, title, category,
+        dayNumber: dayNumber || null,
+        description: description || null,
+        sortOrder: sort++,
         isCustomerVisible: true,
         isGenerated: true,
       },
     })
+  }
+
+  // ==================== PRE-TRIP ITEMS ====================
+  await add("Passport verified and valid", "PRE_TRIP")
+  await add("Travel insurance confirmed", "PRE_TRIP")
+  await add("Flights booked and confirmed", "PRE_TRIP")
+  await add("Accommodations confirmed", "PRE_TRIP")
+  await add("Packing complete", "PRE_TRIP")
+
+  // ==================== DAY-BY-DAY ITEMS FROM ITINERARY ====================
+  for (const day of itinerary) {
+    const dayNum = day.day || day.dayNumber
+    const activities = Array.isArray(day.activities) ? day.activities : []
+    const meals = Array.isArray(day.meals) ? day.meals : []
+
+    // Day header
+    await add(
+      day.title || `Day ${dayNum}`,
+      "DAY_ACTIVITY",
+      dayNum,
+      day.location ? `${day.location}${day.description ? ` — ${day.description}` : ""}` : day.description || undefined,
+    )
+
+    // Hotel check-in for this day
+    if (day.accommodation) {
+      await add(`Check in: ${day.accommodation}`, "DAY_ACTIVITY", dayNum)
+    }
+
+    // Activities from this day
+    for (const act of activities) {
+      if (act && typeof act === "string" && act.trim()) {
+        await add(act.trim(), "DAY_ACTIVITY", dayNum)
+      }
+    }
+
+    // Meals/restaurants from this day
+    for (const meal of meals) {
+      if (meal && typeof meal === "string" && meal.trim()) {
+        await add(meal.trim(), "DAY_ACTIVITY", dayNum)
+      }
+    }
+
+    // Transport notes as a checklist item
+    if (day.transportNotes) {
+      await add(day.transportNotes, "DAY_ACTIVITY", dayNum)
+    }
+  }
+
+  // ==================== TRIP-LEVEL ITEMS ====================
+  // Add experiences that aren't already covered by day activities
+  const dayActivityTitles = new Set(
+    itinerary.flatMap((d: any) => {
+      const acts = Array.isArray(d.activities) ? d.activities : []
+      return acts.map((a: string) => a?.trim().toLowerCase()).filter(Boolean)
+    })
+  )
+
+  for (const exp of experiences) {
+    if (exp.name && !dayActivityTitles.has(exp.name.trim().toLowerCase())) {
+      await add(exp.name, "DURING_TRIP", undefined, exp.description || undefined)
+    }
   }
 
   revalidatePath(`/my-trip`)

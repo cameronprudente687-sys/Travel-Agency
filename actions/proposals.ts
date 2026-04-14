@@ -3,6 +3,7 @@
 import { db } from "@/lib/db"
 import { revalidatePath } from "next/cache"
 import { slugify } from "@/lib/utils"
+import { generateChecklistFromItinerary } from "./checklist"
 
 interface ProposalInput {
   title: string
@@ -184,6 +185,12 @@ export async function publishTripFromVersion(leadId: string, versionId: string, 
     where: { id: proposal.id },
     data: { status: "SENT", sentAt: new Date() },
   })
+
+  // Auto-generate checklist from the itinerary
+  const portalPage = await db.clientPortalPage.findUnique({ where: { leadId } })
+  if (portalPage) {
+    await generateChecklistFromItinerary(portalPage.id)
+  }
 
   revalidatePath(`/leads/${leadId}`)
   return proposal
