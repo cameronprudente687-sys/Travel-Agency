@@ -15,6 +15,7 @@ import {
 import { createVersion, updateVersion } from "@/actions/versions"
 import { toast } from "sonner"
 import { PlacePicker } from "./PlacePicker"
+import { SurveyPanel } from "./SurveyPanel"
 
 // ==================== TYPES ====================
 
@@ -74,9 +75,11 @@ interface Props {
   version?: any
   templates?: any[]
   trigger?: React.ReactNode
+  survey?: any
+  clientName?: string
 }
 
-export function ItineraryBuilder({ leadId, version, templates = [], trigger }: Props) {
+export function ItineraryBuilder({ leadId, version, templates = [], trigger, survey, clientName }: Props) {
   const isEdit = !!version
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -337,7 +340,7 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger }: P
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className={`${survey ? "max-w-6xl" : "max-w-4xl"} max-h-[90vh] overflow-hidden flex flex-col p-0`}>
         <DialogHeader className="px-6 pt-5 pb-0">
           <DialogTitle className="text-xl font-serif">
             {isEdit ? "Edit Itinerary" : "Build New Itinerary"}
@@ -363,6 +366,8 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger }: P
         </div>
 
         {/* Content */}
+        <div className="flex-1 flex overflow-hidden">
+        {/* Main builder content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {/* Start from Template */}
           {!isEdit && activeTab === "overview" && templates.length > 0 && (
@@ -635,6 +640,12 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger }: P
               </div>
             </div>
           )}
+        </div>
+
+        {/* Survey sidebar */}
+        {survey && clientName && (
+          <SurveyPanel survey={survey} clientName={clientName} />
+        )}
         </div>
 
         {/* Footer */}

@@ -50,6 +50,22 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
 
   const survey = lead.survey
   const aiSummary = lead.summary
+  const clientFullName = `${lead.firstName} ${lead.lastName}`
+  // Serializable survey for client components (strip Date fields)
+  const surveyForBuilder = survey ? {
+    travelerType: survey.travelerType, groupSize: survey.groupSize,
+    budget: survey.budget, tripDurationMin: survey.tripDurationMin,
+    tripDurationMax: survey.tripDurationMax, pacePreference: survey.pacePreference,
+    travelStyles: survey.travelStyles, accommodationType: survey.accommodationType,
+    interests: survey.interests, mustHaveExperiences: survey.mustHaveExperiences,
+    avoidExperiences: survey.avoidExperiences, diningImportance: survey.diningImportance,
+    diningStyle: survey.diningStyle, dietaryRestrictions: survey.dietaryRestrictions,
+    tripFeeling: survey.tripFeeling, oneWord: survey.oneWord,
+    destinationsList: survey.destinationsList,
+    celebrationDetails: survey.celebrationDetails,
+    accessibilityNeeds: survey.accessibilityNeeds,
+    otherRequests: survey.otherRequests,
+  } : undefined
   const destinations = parseJsonField<string[]>(survey?.destinationsList, [])
   const styles = parseJsonField<string[]>(survey?.travelStyles, [])
   const interests = parseJsonField<string[]>(survey?.interests, [])
@@ -76,7 +92,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <LeadStatusSelect leadId={lead.id} currentStatus={lead.status} />
-            <ItineraryBuilder leadId={lead.id} templates={itineraryTemplates} />
+            <ItineraryBuilder leadId={lead.id} templates={itineraryTemplates} survey={surveyForBuilder} clientName={clientFullName} />
             {lead.portalPage && (
               <Button asChild variant="outline" size="sm" className="border-white/30 text-white bg-white/10 hover:bg-white/20">
                 <Link href={`/portal/${lead.portalPage.slug}`} target="_blank">View Portal</Link>
@@ -272,7 +288,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
           <TabsContent value="versions" className="mt-5">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <ItineraryBuilder leadId={lead.id} templates={itineraryTemplates} />
+                <ItineraryBuilder leadId={lead.id} templates={itineraryTemplates} survey={surveyForBuilder} clientName={clientFullName} />
                 {lead.tripVersions.length >= 2 && (
                   <VersionComparison versions={lead.tripVersions} />
                 )}
@@ -312,6 +328,8 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
                             leadId={lead.id}
                             version={version}
                             templates={itineraryTemplates}
+                            survey={surveyForBuilder}
+                            clientName={clientFullName}
                             trigger={<Button variant="outline" size="sm"><Edit className="w-4 h-4 mr-1" /> Edit</Button>}
                           />
                           <VersionActions version={version} leadId={lead.id} leadFirstName={lead.firstName} hasProposal={hasLinkedProposal} />
@@ -339,7 +357,7 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
                   <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500 font-medium mb-1">No itineraries yet</p>
                   <p className="text-sm text-gray-400 mb-5">Click &ldquo;Build Itinerary&rdquo; above to start designing this trip</p>
-                  <ItineraryBuilder leadId={lead.id} templates={itineraryTemplates} />
+                  <ItineraryBuilder leadId={lead.id} templates={itineraryTemplates} survey={surveyForBuilder} clientName={clientFullName} />
                 </div>
               )}
             </div>
