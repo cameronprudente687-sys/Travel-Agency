@@ -22,20 +22,8 @@ const faqs = [
     a: "It starts with a short survey — about 10 minutes. I review your responses, build your traveler profile, and then design an itinerary tailored to you. From there, we refine it together until every detail feels right.",
   },
   {
-    q: "How much does it cost?",
-    a: "Planning fees start at $500 and range to $1,500+ for complex multi-destination itineraries. The fee covers unlimited revisions, full booking management, and trip support. Most clients find it pays for itself in time saved and better experiences.",
-  },
-  {
     q: "Do you book flights too?",
     a: "Yes — I can handle the entire trip from flights to accommodation to experiences and transfers. If you prefer to use miles, I can guide you through the best redemption options while I take care of everything else.",
-  },
-  {
-    q: "Can you work with last-minute trips?",
-    a: "I can work within tight timelines, though the best experiences require advance planning. For most international trips, 60–90 days is ideal. Share what you have and I'll tell you what's possible.",
-  },
-  {
-    q: "What if I want to change the itinerary?",
-    a: "Unlimited revisions — I refine until it feels right. Most clients go through 2–3 rounds before everything clicks.",
   },
   {
     q: "How do I get started?",
