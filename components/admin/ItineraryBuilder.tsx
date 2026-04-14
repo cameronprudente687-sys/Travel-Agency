@@ -211,18 +211,29 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger }: P
     const isDining = ["RESTAURANT", "CAFE", "BAR"].includes(place.category)
 
     if (isHotel) {
-      updateDay(dayId, "accommodation", place.name)
-      toast.success(`Set ${place.name} as accommodation`)
+      // Set as accommodation AND add as an activity so it's visually obvious
+      setDays(prev => prev.map(d => d.id === dayId
+        ? { ...d, accommodation: place.name, activities: [...d.activities, `Check in: ${place.name}`] }
+        : d))
+      // Also add to the trip-level hotels list
+      const alreadyAdded = hotels.some(h => h.name === place.name)
+      if (!alreadyAdded) {
+        setHotels(prev => [...prev, {
+          id: uid(), name: place.name, location: `${place.destination}, ${place.country}`,
+          description: place.description, whyRecommended: place.whyWeRecommend,
+        }])
+      }
+      toast.success(`Added ${place.name} to Day ${days.findIndex(d => d.id === dayId) + 1}`)
     } else if (isDining) {
       setDays(prev => prev.map(d => d.id === dayId
-        ? { ...d, meals: [...d.meals, `${place.name} — ${place.whyWeRecommend || place.description}`] }
+        ? { ...d, meals: [...d.meals, place.name] }
         : d))
-      toast.success(`Added ${place.name} to meals`)
+      toast.success(`Added ${place.name} to Day ${days.findIndex(d => d.id === dayId) + 1}`)
     } else {
       setDays(prev => prev.map(d => d.id === dayId
-        ? { ...d, activities: [...d.activities, `${place.name} — ${place.whyWeRecommend || place.description}`] }
+        ? { ...d, activities: [...d.activities, place.name] }
         : d))
-      toast.success(`Added ${place.name} to activities`)
+      toast.success(`Added ${place.name} to Day ${days.findIndex(d => d.id === dayId) + 1}`)
     }
   }
 

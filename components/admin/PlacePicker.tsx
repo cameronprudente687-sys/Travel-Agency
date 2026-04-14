@@ -71,12 +71,14 @@ export function PlacePicker({ mode, onSelect, trigger }: Props) {
 
   const handleSelect = (place: SavedPlace) => {
     setSelected(place.id)
-    onSelect(place)
+    // Close dialog first, then call onSelect so parent state updates cleanly
+    setOpen(false)
+    // Small delay to let the dialog close animation finish before updating parent state
     setTimeout(() => {
-      setOpen(false)
+      onSelect(place)
       setSelected(null)
       setQuery("")
-    }, 300)
+    }, 100)
   }
 
   return (
