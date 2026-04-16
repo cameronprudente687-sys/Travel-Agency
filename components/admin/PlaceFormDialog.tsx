@@ -1,156 +1,125 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Loader2 } from "lucide-react"
+import { Plus, Hotel, Utensils, Sparkles, MapPin } from "lucide-react"
 import { toast } from "sonner"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
-import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { createPlace, updatePlace } from "@/actions/places"
 
-interface PlaceFormDialogProps {
+// Quick category groups
+const CATEGORY_GROUPS = [
+  { value: "HOTEL", label: "Hotel", icon: Hotel, color: "primary" },
+  { value: "RESTAURANT", label: "Restaurant", icon: Utensils, color: "amber" },
+  { value: "EXPERIENCE", label: "Experience", icon: Sparkles, color: "gold" },
+]
+
+const SUB_CATEGORIES: Record<string, { value: string; label: string }[]> = {
+  HOTEL: [
+    { value: "HOTEL", label: "Hotel" },
+    { value: "BOUTIQUE_HOTEL", label: "Boutique" },
+    { value: "RESORT", label: "Resort" },
+    { value: "VILLA", label: "Villa" },
+    { value: "SPA", label: "Spa / Wellness" },
+  ],
+  RESTAURANT: [
+    { value: "RESTAURANT", label: "Restaurant" },
+    { value: "CAFE", label: "Cafe" },
+    { value: "BAR", label: "Bar" },
+  ],
+  EXPERIENCE: [
+    { value: "EXPERIENCE", label: "Experience" },
+    { value: "ACTIVITY", label: "Activity" },
+    { value: "TOUR", label: "Tour" },
+    { value: "LANDMARK", label: "Landmark" },
+    { value: "BEACH", label: "Beach" },
+  ],
+}
+
+// Category-specific quick tags
+const QUICK_TAGS: Record<string, string[]> = {
+  HOTEL: ["Luxury", "Boutique", "Spa", "Ocean View", "Central", "Romantic", "Family-Friendly", "Design Hotel", "Historic", "Pool", "Rooftop", "Quiet"],
+  BOUTIQUE_HOTEL: ["Luxury", "Boutique", "Spa", "Ocean View", "Central", "Romantic", "Family-Friendly", "Design Hotel", "Historic", "Pool", "Rooftop", "Quiet"],
+  RESORT: ["Luxury", "All-Inclusive", "Beachfront", "Spa", "Family-Friendly", "Adults Only", "Pool", "Golf"],
+  VILLA: ["Private", "Pool", "Ocean View", "Luxury", "Romantic", "Family", "Countryside"],
+  SPA: ["Wellness", "Luxury", "Couples", "Day Spa", "Resort Spa", "Thermal", "Holistic"],
+  RESTAURANT: ["Fine Dining", "Local Favorite", "Seafood", "Italian", "French", "Rooftop", "Romantic", "Wine Bar", "Tasting Menu", "Brunch", "Family-Friendly", "Casual", "Upscale"],
+  CAFE: ["Coffee", "Brunch", "Bakery", "Terrace", "Local Spot", "Historic"],
+  BAR: ["Wine Bar", "Cocktails", "Rooftop", "Hotel Bar", "Local", "Jazz"],
+  EXPERIENCE: ["Cultural", "Food Experience", "Wellness", "Scenic", "Adventure", "Private Tour", "Family-Friendly", "Romantic", "Iconic", "Hidden Gem"],
+  ACTIVITY: ["Outdoor", "Water Sports", "Hiking", "Cycling", "Photography", "Cooking Class", "Wine Tasting"],
+  TOUR: ["Walking Tour", "Private", "Food Tour", "History", "Architecture", "Day Trip"],
+  LANDMARK: ["Historic", "Iconic", "Scenic", "Must-See", "Photography"],
+  BEACH: ["Swimming", "Snorkeling", "Quiet", "Family", "Beach Club", "Scenic"],
+}
+
+function parseJsonArray(value: any): string[] {
+  if (!value) return []
+  try { return Array.isArray(value) ? value : JSON.parse(value) } catch { return [] }
+}
+
+function getCategoryGroup(cat: string): string {
+  if (["HOTEL", "BOUTIQUE_HOTEL", "RESORT", "VILLA", "SPA"].includes(cat)) return "HOTEL"
+  if (["RESTAURANT", "CAFE", "BAR"].includes(cat)) return "RESTAURANT"
+  return "EXPERIENCE"
+}
+
+interface Props {
   place?: any
   trigger?: React.ReactNode
 }
 
-const CATEGORIES = [
-  { value: "HOTEL", label: "Hotel" },
-  { value: "RESORT", label: "Resort" },
-  { value: "BOUTIQUE_HOTEL", label: "Boutique Hotel" },
-  { value: "VILLA", label: "Villa" },
-  { value: "RESTAURANT", label: "Restaurant" },
-  { value: "CAFE", label: "Cafe" },
-  { value: "BAR", label: "Bar" },
-  { value: "EXPERIENCE", label: "Experience" },
-  { value: "ACTIVITY", label: "Activity" },
-  { value: "TOUR", label: "Tour" },
-  { value: "SPA", label: "Spa" },
-  { value: "BEACH", label: "Beach" },
-  { value: "LANDMARK", label: "Landmark" },
-]
-
-const PRICE_LEVELS = [
-  { value: "1", label: "$" },
-  { value: "2", label: "$$" },
-  { value: "3", label: "$$$" },
-  { value: "4", label: "$$$$" },
-]
-
-const BEST_FOR_OPTIONS = [
-  "COUPLE",
-  "SOLO",
-  "FAMILY_YOUNG_KIDS",
-  "FAMILY_TEENS",
-  "GROUP_FRIENDS",
-  "HONEYMOON",
-  "ANNIVERSARY",
-  "FOODIE",
-  "ADVENTURE",
-  "CULTURAL",
-  "LUXURY",
-  "WELLNESS",
-]
-
-function parseJsonArray(value: any): string[] {
-  if (!value) return []
-  if (Array.isArray(value)) return value
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value)
-      return Array.isArray(parsed) ? parsed : []
-    } catch {
-      return []
-    }
-  }
-  return []
-}
-
-function formatLabel(value: string): string {
-  return value
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-export function PlaceFormDialog({ place, trigger }: PlaceFormDialogProps) {
-  const isEditing = !!place
+export function PlaceFormDialog({ place, trigger }: Props) {
+  const isEdit = !!place
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const existingBestFor = parseJsonArray(place?.bestFor)
+  const [name, setName] = useState(place?.name || "")
+  const [destination, setDestination] = useState(place?.destination || "")
+  const [country, setCountry] = useState(place?.country || "")
+  const [category, setCategory] = useState(place?.category || "")
+  const [categoryGroup, setCategoryGroup] = useState(place?.category ? getCategoryGroup(place.category) : "")
+  const [tags, setTags] = useState<string[]>(parseJsonArray(place?.tags))
+  const [note, setNote] = useState(place?.whyWeRecommend || "")
+  const [isTopPick, setIsTopPick] = useState(place?.isTopPick || false)
 
-  const [name, setName] = useState(place?.name ?? "")
-  const [destination, setDestination] = useState(place?.destination ?? "")
-  const [country, setCountry] = useState(place?.country ?? "")
-  const [flagEmoji, setFlagEmoji] = useState(place?.flagEmoji ?? "")
-  const [category, setCategory] = useState(place?.category ?? "")
-  const [description, setDescription] = useState(place?.description ?? "")
-  const [priceLevel, setPriceLevel] = useState<string>(
-    place?.priceLevel?.toString() ?? ""
-  )
-  const [rating, setRating] = useState<string>(place?.rating?.toString() ?? "")
-  const [address, setAddress] = useState(place?.address ?? "")
-  const [website, setWebsite] = useState(place?.website ?? "")
-  const [whyWeRecommend, setWhyWeRecommend] = useState(place?.whyWeRecommend ?? "")
-  const [bestFor, setBestFor] = useState<string[]>(existingBestFor)
-  const [isTopPick, setIsTopPick] = useState(place?.isTopPick ?? false)
-  const [isFeatured, setIsFeatured] = useState(place?.isFeatured ?? false)
-
-  function toggleArrayItem(arr: string[], item: string, setter: (v: string[]) => void) {
-    if (arr.includes(item)) {
-      setter(arr.filter((i) => i !== item))
-    } else {
-      setter([...arr, item])
-    }
+  const toggleTag = (tag: string) => {
+    setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
+  const selectCategoryGroup = (group: string) => {
+    setCategoryGroup(group)
+    // Auto-select the first sub-category
+    const subs = SUB_CATEGORIES[group]
+    if (subs && subs.length > 0) setCategory(subs[0].value)
+  }
 
+  const availableTags = QUICK_TAGS[category] || QUICK_TAGS[categoryGroup] || []
+
+  const handleSave = async () => {
+    if (!name.trim()) { toast.error("Name is required"); return }
+    if (!category) { toast.error("Please select a category"); return }
+    setLoading(true)
     try {
       const input = {
-        name,
-        destination,
-        country,
-        flagEmoji: flagEmoji || undefined,
+        name: name.trim(),
+        destination: destination.trim() || "Unknown",
+        country: country.trim() || "",
         category,
-        description,
-        priceLevel: priceLevel ? parseInt(priceLevel) : undefined,
-        rating: rating ? parseFloat(rating) : undefined,
-        address: address || undefined,
-        website: website || undefined,
-        whyWeRecommend,
-        bestFor: bestFor.length > 0 ? bestFor : undefined,
-        isFeatured,
+        description: note || name,
+        whyWeRecommend: note || `Saved from Voyagr`,
+        tags: tags.length > 0 ? tags : undefined,
         isTopPick,
       }
-
-      if (isEditing) {
+      if (isEdit) {
         await updatePlace(place.id, input)
-        toast.success("Place updated successfully")
+        toast.success("Place updated")
       } else {
         await createPlace(input)
-        toast.success("Place created successfully")
+        toast.success(`${name} saved to your library`)
       }
-
       setOpen(false)
     } catch {
       toast.error("Something went wrong")
@@ -162,244 +131,121 @@ export function PlaceFormDialog({ place, trigger }: PlaceFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || <Button variant="navy" className="gap-2"><Plus className="h-4 w-4" />New Place</Button>}
+        {trigger || <Button variant="navy"><Plus className="w-4 h-4 mr-1" /> New Place</Button>}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">
-            {isEditing ? "Edit Place" : "Add New Place"}
-          </DialogTitle>
+      <DialogContent className="max-w-lg max-h-[88vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="px-6 pt-5 pb-0">
+          <DialogTitle className="text-xl font-serif">{isEdit ? "Edit Place" : "Save a New Place"}</DialogTitle>
+          {!isEdit && <p className="text-sm text-gray-500 mt-1">Add a hotel, restaurant, or experience to your library.</p>}
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6 pt-2">
-          {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-base font-medium">
-              Name
-            </Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Le Meurice"
-              className="h-12 text-base"
-              required
-            />
-          </div>
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
 
-          {/* Destination / Country / Flag row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="destination" className="text-base font-medium">
-                Destination
-              </Label>
-              <Input
-                id="destination"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="e.g. Paris"
-                className="h-12 text-base"
-                required
-              />
+          {/* Step 1: What type? — big visual buttons */}
+          {!isEdit && (
+            <div>
+              <Label className="text-sm font-medium text-gray-900 mb-3 block">What kind of place?</Label>
+              <div className="grid grid-cols-3 gap-3">
+                {CATEGORY_GROUPS.map(g => {
+                  const Icon = g.icon
+                  const active = categoryGroup === g.value
+                  return (
+                    <button key={g.value} type="button" onClick={() => selectCategoryGroup(g.value)}
+                      className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                        active ? "border-primary-600 bg-primary-50" : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}>
+                      <Icon className={`w-6 h-6 ${active ? "text-primary-700" : "text-gray-400"}`} />
+                      <span className={`text-sm font-medium ${active ? "text-primary-800" : "text-gray-600"}`}>{g.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="country" className="text-base font-medium">
-                Country
-              </Label>
-              <Input
-                id="country"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                placeholder="e.g. France"
-                className="h-12 text-base"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="flagEmoji" className="text-base font-medium">
-                Flag Emoji
-              </Label>
-              <Input
-                id="flagEmoji"
-                value={flagEmoji}
-                onChange={(e) => setFlagEmoji(e.target.value)}
-                placeholder="e.g. \uD83C\uDDEB\uD83C\uDDF7"
-                className="h-12 text-base w-24"
-              />
-            </div>
-          </div>
+          )}
 
-          {/* Category / Price Level / Rating row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label className="text-base font-medium">Category</Label>
-              <Select value={category} onValueChange={setCategory} required>
-                <SelectTrigger className="h-12 text-base">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-base font-medium">
-                Price Level <span className="text-gray-400 text-sm">(optional)</span>
-              </Label>
-              <Select value={priceLevel} onValueChange={setPriceLevel}>
-                <SelectTrigger className="h-12 text-base">
-                  <SelectValue placeholder="Select price" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PRICE_LEVELS.map((p) => (
-                    <SelectItem key={p.value} value={p.value}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="rating" className="text-base font-medium">
-                Rating <span className="text-gray-400 text-sm">(0-5)</span>
-              </Label>
-              <Input
-                id="rating"
-                type="number"
-                min={0}
-                max={5}
-                step={0.1}
-                value={rating}
-                onChange={(e) => setRating(e.target.value)}
-                placeholder="e.g. 4.5"
-                className="h-12 text-base"
-              />
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description" className="text-base font-medium">
-              Description
-            </Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe this place..."
-              className="min-h-[100px] text-base"
-              required
-            />
-          </div>
-
-          {/* Address / Website */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="address" className="text-base font-medium">
-                Address <span className="text-gray-400 text-sm">(optional)</span>
-              </Label>
-              <Input
-                id="address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. 228 Rue de Rivoli, 75001 Paris"
-                className="h-12 text-base"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="website" className="text-base font-medium">
-                Website <span className="text-gray-400 text-sm">(optional)</span>
-              </Label>
-              <Input
-                id="website"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                placeholder="e.g. https://lemeurice.com"
-                className="h-12 text-base"
-              />
-            </div>
-          </div>
-
-          {/* Why We Recommend */}
-          <div className="space-y-2">
-            <Label htmlFor="whyWeRecommend" className="text-base font-medium">
-              Why We Recommend
-            </Label>
-            <Textarea
-              id="whyWeRecommend"
-              value={whyWeRecommend}
-              onChange={(e) => setWhyWeRecommend(e.target.value)}
-              placeholder="What makes this place special..."
-              className="min-h-[100px] text-base"
-              required
-            />
-          </div>
-
-          {/* Best For */}
-          <div className="space-y-3">
-            <Label className="text-base font-medium">Best For</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {BEST_FOR_OPTIONS.map((option) => (
-                <label
-                  key={option}
-                  className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-gray-50 transition-colors"
-                >
-                  <Checkbox
-                    checked={bestFor.includes(option)}
-                    onCheckedChange={() =>
-                      toggleArrayItem(bestFor, option, setBestFor)
-                    }
-                  />
-                  <span className="text-sm font-medium">{formatLabel(option)}</span>
-                </label>
+          {/* Sub-category if needed */}
+          {categoryGroup && SUB_CATEGORIES[categoryGroup] && SUB_CATEGORIES[categoryGroup].length > 1 && (
+            <div className="flex flex-wrap gap-1.5">
+              {SUB_CATEGORIES[categoryGroup].map(sub => (
+                <button key={sub.value} type="button" onClick={() => setCategory(sub.value)}
+                  className={`text-xs rounded-full px-3 py-1.5 font-medium transition-colors ${
+                    category === sub.value ? "bg-primary-700 text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}>
+                  {sub.label}
+                </button>
               ))}
             </div>
+          )}
+
+          {/* Step 2: Name + location — the essentials */}
+          <div>
+            <Label className="text-sm font-medium text-gray-900 mb-1.5 block">Place Name *</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder={
+              categoryGroup === "HOTEL" ? "e.g., Le Sirenuse" :
+              categoryGroup === "RESTAURANT" ? "e.g., Da Enzo al 29" :
+              "e.g., Private Vatican Tour"
+            } className="text-lg h-12 font-medium" autoFocus />
           </div>
 
-          {/* Switches */}
-          <div className="space-y-4 rounded-lg border p-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="isTopPick" className="text-base font-medium cursor-pointer">
-                Top Pick
-              </Label>
-              <Switch
-                id="isTopPick"
-                checked={isTopPick}
-                onCheckedChange={setIsTopPick}
-              />
+          <div className="grid grid-cols-5 gap-3">
+            <div className="col-span-3">
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block flex items-center gap-1"><MapPin className="w-3 h-3" /> City / Destination</Label>
+              <Input value={destination} onChange={e => setDestination(e.target.value)} placeholder="e.g., Positano" className="text-base" />
             </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="isFeatured" className="text-base font-medium cursor-pointer">
-                Featured
-              </Label>
-              <Switch
-                id="isFeatured"
-                checked={isFeatured}
-                onCheckedChange={setIsFeatured}
-              />
+            <div className="col-span-2">
+              <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Country</Label>
+              <Input value={country} onChange={e => setCountry(e.target.value)} placeholder="e.g., Italy" className="text-base" />
             </div>
           </div>
 
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              className="h-12 px-6 text-base"
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={loading} className="h-12 px-8 text-base">
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isEditing ? "Save Changes" : "Add Place"}
+          {/* Step 3: Quick tags — category-specific */}
+          {availableTags.length > 0 && (
+            <div>
+              <Label className="text-sm font-medium text-gray-900 mb-2 block">Quick Tags</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {availableTags.map(tag => (
+                  <button key={tag} type="button" onClick={() => toggleTag(tag)}
+                    className={`text-sm rounded-full px-3.5 py-1.5 font-medium transition-all ${
+                      tags.includes(tag)
+                        ? "bg-primary-700 text-white shadow-sm"
+                        : "bg-gray-50 text-gray-600 border border-gray-200 hover:border-primary-300"
+                    }`}>
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Optional note */}
+          <div>
+            <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Quick Note <span className="text-gray-400 font-normal">(optional)</span></Label>
+            <Input value={note} onChange={e => setNote(e.target.value)} placeholder={
+              categoryGroup === "HOTEL" ? "e.g., Amazing spa, perfect for couples" :
+              categoryGroup === "RESTAURANT" ? "e.g., Best carbonara in Rome, reservation needed" :
+              "e.g., Book 2 weeks ahead, incredible views"
+            } className="text-base" />
+          </div>
+
+          {/* Top pick toggle */}
+          <label className="flex items-center gap-2.5 cursor-pointer">
+            <input type="checkbox" checked={isTopPick} onChange={e => setIsTopPick(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-primary-700 focus:ring-primary-500" />
+            <span className="text-sm text-gray-700">Mark as a top pick</span>
+          </label>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+          <p className="text-xs text-gray-400">
+            {tags.length > 0 ? `${tags.length} tag${tags.length > 1 ? "s" : ""}` : "No tags"} · {category.replace(/_/g, " ") || "No category"}
+          </p>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="navy" onClick={handleSave} disabled={loading} className="min-w-[120px]">
+              {loading ? "Saving..." : isEdit ? "Save Changes" : "Save Place"}
             </Button>
           </div>
-        </form>
+        </div>
       </DialogContent>
     </Dialog>
   )
