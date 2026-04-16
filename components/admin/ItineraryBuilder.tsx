@@ -14,6 +14,7 @@ import {
   FileText, ArrowRight, Copy
 } from "lucide-react"
 import { createVersion, updateVersion } from "@/actions/versions"
+import { createTemplate } from "@/actions/templates"
 import { toast } from "sonner"
 import { PlacePicker } from "./PlacePicker"
 import { SurveyPanel } from "./SurveyPanel"
@@ -78,15 +79,17 @@ function parseJson(val: any, fb: any) {
 // ==================== MAIN COMPONENT ====================
 
 interface Props {
-  leadId: string
+  leadId?: string
   version?: any
   templates?: any[]
   trigger?: React.ReactNode
   survey?: any
   clientName?: string
+  mode?: "version" | "template"
 }
 
-export function ItineraryBuilder({ leadId, version, templates = [], trigger, survey, clientName }: Props) {
+export function ItineraryBuilder({ leadId, version, templates = [], trigger, survey, clientName, mode = "version" }: Props) {
+  const isTemplateMode = mode === "template"
   const isEdit = !!version
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -407,11 +410,36 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
         status,
       }
 
-      if (isEdit) {
-        await updateVersion(version.id, leadId, input)
+      if (isTemplateMode) {
+        await createTemplate({
+          title,
+          destination: destArr.join(", "),
+          country: destArr[0] || "",
+          summary: input.summary,
+          description: input.summary,
+          durationDays: days.length,
+          travelStyles: [],
+          travelerTypes: ["COUPLE"],
+          budgetLevel: "FIVE_TO_10K",
+          paceLevel: "moderate",
+          highlights: experiences.filter(e => e.name).map(e => e.name),
+          includes: [],
+        }, days.map((d, i) => ({
+          dayNumber: i + 1,
+          title: d.title,
+          location: d.location,
+          description: d.description,
+          activities: d.activities.filter(Boolean),
+          meals: d.meals.filter(Boolean),
+          accommodation: d.accommodation,
+          transportNotes: d.transports.filter(Boolean).join("; "),
+        })))
+        toast.success("Template created! Find it in your Template Library.")
+      } else if (isEdit) {
+        await updateVersion(version.id, leadId!, input)
         toast.success("Itinerary updated")
       } else {
-        await createVersion(leadId, input)
+        await createVersion(leadId!, input)
         toast.success("Itinerary created")
       }
       setOpen(false)
@@ -452,7 +480,7 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
       <DialogContent className={`${survey ? "max-w-6xl" : "max-w-4xl"} max-h-[90vh] overflow-hidden flex flex-col p-0`}>
         <DialogHeader className="px-6 pt-5 pb-0">
           <DialogTitle className="text-xl font-serif">
-            {isEdit ? "Edit Itinerary" : "Build New Itinerary"}
+            {isTemplateMode ? "Build New Template" : isEdit ? "Edit Itinerary" : "Build New Itinerary"}
           </DialogTitle>
         </DialogHeader>
 
@@ -821,7 +849,7 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="navy" onClick={handleSave} disabled={loading} className="min-w-[120px]">
-              {loading ? "Saving..." : isEdit ? "Save Itinerary" : "Create Itinerary"}
+              {loading ? "Saving..." : isTemplateMode ? "Save Template" : isEdit ? "Save Itinerary" : "Create Itinerary"}
             </Button>
           </div>
         </div>

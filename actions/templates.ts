@@ -55,8 +55,31 @@ function toData(input: TemplateInput) {
   }
 }
 
-export async function createTemplate(input: TemplateInput) {
+export async function createTemplate(input: TemplateInput, days?: Array<{
+  dayNumber: number; title: string; location: string; description: string;
+  activities: string[]; meals?: string[]; accommodation?: string; transportNotes?: string;
+}>) {
   const template = await db.itineraryTemplate.create({ data: toData(input) })
+
+  // Save day-by-day data if provided
+  if (days && days.length > 0) {
+    for (const day of days) {
+      await db.templateDay.create({
+        data: {
+          templateId: template.id,
+          dayNumber: day.dayNumber,
+          title: day.title || `Day ${day.dayNumber}`,
+          location: day.location || "",
+          description: day.description || "",
+          activities: JSON.stringify(day.activities || []),
+          meals: day.meals ? JSON.stringify(day.meals) : null,
+          accommodation: day.accommodation || null,
+          transportNotes: day.transportNotes || null,
+        },
+      })
+    }
+  }
+
   revalidatePath("/templates")
   return template
 }

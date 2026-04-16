@@ -1,9 +1,10 @@
 import { db } from "@/lib/db"
 import { AdminHeader } from "@/components/layout/AdminHeader"
 import { parseJsonField } from "@/lib/utils"
-import { Map } from "lucide-react"
+import { Map, Plus } from "lucide-react"
 import Link from "next/link"
-import { TemplateFormDialog } from "@/components/admin/TemplateFormDialog"
+import { Button } from "@/components/ui/button"
+import { ItineraryBuilder } from "@/components/admin/ItineraryBuilder"
 import { TemplateCard } from "@/components/admin/TemplateCard"
 import { SearchBar } from "@/components/admin/SearchBar"
 import { Suspense } from "react"
@@ -46,7 +47,7 @@ export default async function TemplatesPage({ searchParams }: Props) {
             <Suspense>
               <SearchBar basePath="/templates" placeholder="Search templates..." />
             </Suspense>
-            <TemplateFormDialog />
+            <ItineraryBuilder mode="template" trigger={<Button variant="navy"><Plus className="w-4 h-4 mr-1" /> Build New Template</Button>} />
           </div>
         </div>
 
@@ -97,7 +98,7 @@ export default async function TemplatesPage({ searchParams }: Props) {
             <p className="text-gray-500 font-medium mb-2">
               {searchQuery ? `No templates matching "${searchQuery}"` : "No templates yet"}
             </p>
-            <TemplateFormDialog />
+            <ItineraryBuilder mode="template" trigger={<Button variant="navy"><Plus className="w-4 h-4 mr-1" /> Build New Template</Button>} />
           </div>
         )}
       </div>
