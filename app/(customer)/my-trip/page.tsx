@@ -174,17 +174,25 @@ export default async function MyTripPage() {
                     <div className="p-5">
                       {day.description && <p className="text-gray-600 mb-3 leading-relaxed">{day.description}</p>}
                       {acts.length > 0 && (
-                        <ul className="space-y-1.5">
-                          {acts.map((a: string, j: number) => (
-                            <li key={j} className="flex items-start gap-2 text-gray-700">
-                              <ChevronRight className="w-4 h-4 text-gold-500 shrink-0 mt-0.5" />{a}
-                            </li>
-                          ))}
+                        <ul className="space-y-2">
+                          {acts.map((a: string, j: number) => {
+                            const actNotes = Array.isArray(day.activityNotes) ? day.activityNotes : []
+                            return (
+                              <li key={j} className="flex items-start gap-2 text-gray-700">
+                                <ChevronRight className="w-4 h-4 text-gold-500 shrink-0 mt-0.5" />
+                                <div>
+                                  {a}
+                                  {actNotes[j] && <p className="text-xs text-gray-400 italic mt-0.5">{actNotes[j]}</p>}
+                                </div>
+                              </li>
+                            )
+                          })}
                         </ul>
                       )}
                       {day.accommodation && (
-                        <div className="mt-3 text-sm text-primary-600 flex items-center gap-1">
-                          <Hotel className="w-4 h-4" /> {day.accommodation}
+                        <div className="mt-3 text-sm text-primary-600">
+                          <div className="flex items-center gap-1"><Hotel className="w-4 h-4" /> {day.accommodation}</div>
+                          {day.accommodationNote && <p className="text-xs text-gray-400 italic ml-5 mt-0.5">{day.accommodationNote}</p>}
                         </div>
                       )}
                     </div>

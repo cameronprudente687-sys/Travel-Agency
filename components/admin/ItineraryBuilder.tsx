@@ -26,9 +26,13 @@ interface DayItem {
   location: string
   description: string
   accommodation: string
+  accommodationNote: string
   activities: string[]
+  activityNotes: string[]
   meals: string[]
+  mealNotes: string[]
   transportNotes: string
+  transportNote: string
 }
 
 interface HotelItem {
@@ -61,7 +65,7 @@ let counter = 0
 const uid = () => `item_${Date.now()}_${counter++}`
 
 function emptyDay(dayNum: number): DayItem {
-  return { id: uid(), title: `Day ${dayNum}`, location: "", description: "", accommodation: "", activities: [], meals: [], transportNotes: "" }
+  return { id: uid(), title: `Day ${dayNum}`, location: "", description: "", accommodation: "", accommodationNote: "", activities: [], activityNotes: [], meals: [], mealNotes: [], transportNotes: "", transportNote: "" }
 }
 
 function parseJson(val: any, fb: any) {
@@ -105,9 +109,13 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
         location: d.location || "",
         description: d.description || "",
         accommodation: d.accommodation || "",
+        accommodationNote: d.accommodationNote || "",
         activities: Array.isArray(d.activities) ? d.activities : parseJson(d.activities, []),
+        activityNotes: Array.isArray(d.activityNotes) ? d.activityNotes : parseJson(d.activityNotes, []),
         meals: Array.isArray(d.meals) ? d.meals : parseJson(d.meals, []),
+        mealNotes: Array.isArray(d.mealNotes) ? d.mealNotes : parseJson(d.mealNotes, []),
         transportNotes: d.transportNotes || "",
+        transportNote: d.transportNote || "",
       }))
     }
     return [emptyDay(1)]
@@ -158,27 +166,35 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
   }
 
   const addActivity = (dayId: string) => {
-    setDays(prev => prev.map(d => d.id === dayId ? { ...d, activities: [...d.activities, ""] } : d))
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, activities: [...d.activities, ""], activityNotes: [...d.activityNotes, ""] } : d))
   }
 
   const updateActivity = (dayId: string, idx: number, value: string) => {
     setDays(prev => prev.map(d => d.id === dayId ? { ...d, activities: d.activities.map((a, i) => i === idx ? value : a) } : d))
   }
 
+  const updateActivityNote = (dayId: string, idx: number, value: string) => {
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, activityNotes: d.activityNotes.map((n, i) => i === idx ? value : n) } : d))
+  }
+
   const removeActivity = (dayId: string, idx: number) => {
-    setDays(prev => prev.map(d => d.id === dayId ? { ...d, activities: d.activities.filter((_, i) => i !== idx) } : d))
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, activities: d.activities.filter((_, i) => i !== idx), activityNotes: d.activityNotes.filter((_, i) => i !== idx) } : d))
   }
 
   const addMeal = (dayId: string) => {
-    setDays(prev => prev.map(d => d.id === dayId ? { ...d, meals: [...d.meals, ""] } : d))
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, meals: [...d.meals, ""], mealNotes: [...d.mealNotes, ""] } : d))
   }
 
   const updateMeal = (dayId: string, idx: number, value: string) => {
     setDays(prev => prev.map(d => d.id === dayId ? { ...d, meals: d.meals.map((m, i) => i === idx ? value : m) } : d))
   }
 
+  const updateMealNote = (dayId: string, idx: number, value: string) => {
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, mealNotes: d.mealNotes.map((n, i) => i === idx ? value : n) } : d))
+  }
+
   const removeMeal = (dayId: string, idx: number) => {
-    setDays(prev => prev.map(d => d.id === dayId ? { ...d, meals: d.meals.filter((_, i) => i !== idx) } : d))
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, meals: d.meals.filter((_, i) => i !== idx), mealNotes: d.mealNotes.filter((_, i) => i !== idx) } : d))
   }
 
   const moveItem = (dayId: string, field: "activities" | "meals", idx: number, dir: -1 | 1) => {
@@ -297,9 +313,13 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
         location: d.location || "",
         description: d.description || "",
         accommodation: d.accommodation || "",
+        accommodationNote: "",
         activities: parseJson(d.activities, []),
+        activityNotes: [],
         meals: parseJson(d.meals, []),
+        mealNotes: [],
         transportNotes: d.transportNotes || "",
+        transportNote: "",
       })))
     }
 
@@ -331,9 +351,13 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
           location: d.location,
           description: d.description,
           accommodation: d.accommodation,
+          accommodationNote: d.accommodationNote || undefined,
           activities: d.activities.filter(Boolean),
+          activityNotes: d.activityNotes.filter((_, idx) => d.activities[idx]),
           meals: d.meals.filter(Boolean),
+          mealNotes: d.mealNotes.filter((_, idx) => d.meals[idx]),
           transportNotes: d.transportNotes,
+          transportNote: d.transportNote || undefined,
         })),
         hotelIdeas: hotels.filter(h => h.name).map(h => ({
           name: h.name, location: h.location, description: h.description, whyRecommended: h.whyRecommended,
@@ -515,7 +539,10 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
                     {/* HOTEL — clear dedicated section */}
                     <div className="bg-primary-50/50 rounded-lg p-3 border border-primary-100">
                       <Label className="text-xs text-primary-700 font-semibold mb-1.5 block flex items-center gap-1"><Hotel className="w-3.5 h-3.5" /> Where to Stay</Label>
-                      <Input value={day.accommodation} onChange={e => updateDay(day.id, "accommodation", e.target.value)} placeholder="Type a hotel name or use 'From Saved' below" className="text-sm mb-2" />
+                      <Input value={day.accommodation} onChange={e => updateDay(day.id, "accommodation", e.target.value)} placeholder="Type a hotel name or use 'From Saved' below" className="text-sm" />
+                      {day.accommodation && (
+                        <Input value={day.accommodationNote} onChange={e => updateDay(day.id, "accommodationNote", e.target.value)} placeholder="Note: e.g., ocean view room, spa property" className="text-xs text-gray-500 border-0 border-b border-gray-200 rounded-none px-0 h-7 focus-visible:ring-0 mt-1 mb-1 italic" />
+                      )}
                       <div className="flex gap-3 items-center">
                         <PlacePicker mode="hotel" onSelect={(p) => insertPlaceIntoDay(day.id, p)} trigger={
                           <button type="button" className="text-xs text-primary-600 hover:text-primary-800 flex items-center gap-1"><Hotel className="w-3 h-3" /> From saved</button>
@@ -533,14 +560,17 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
                       <Label className="text-xs text-amber-700 font-semibold mb-1.5 block flex items-center gap-1"><Utensils className="w-3.5 h-3.5" /> Where to Eat</Label>
                       <div className="space-y-1.5">
                         {day.meals.map((meal, mi) => (
-                          <div key={mi} className="flex items-center gap-1">
-                            <div className="flex flex-col shrink-0">
-                              <button onClick={() => moveItem(day.id, "meals", mi, -1)} disabled={mi === 0} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronUp className="w-3 h-3" /></button>
-                              <button onClick={() => moveItem(day.id, "meals", mi, 1)} disabled={mi === day.meals.length - 1} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronDown className="w-3 h-3" /></button>
+                          <div key={mi}>
+                            <div className="flex items-center gap-1">
+                              <div className="flex flex-col shrink-0">
+                                <button onClick={() => moveItem(day.id, "meals", mi, -1)} disabled={mi === 0} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronUp className="w-3 h-3" /></button>
+                                <button onClick={() => moveItem(day.id, "meals", mi, 1)} disabled={mi === day.meals.length - 1} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronDown className="w-3 h-3" /></button>
+                              </div>
+                              <Input value={meal} onChange={e => updateMeal(day.id, mi, e.target.value)} placeholder="e.g., Da Enzo al 29" className="text-sm flex-1 bg-white" />
+                              {meal && <button type="button" onClick={() => saveToLibrary(meal, "RESTAURANT")} className="text-gray-300 hover:text-green-600 p-1" title="Save to library"><Plus className="w-3 h-3" /></button>}
+                              <button onClick={() => removeMeal(day.id, mi)} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-3 h-3" /></button>
                             </div>
-                            <Input value={meal} onChange={e => updateMeal(day.id, mi, e.target.value)} placeholder="e.g., Da Enzo al 29" className="text-sm flex-1 bg-white" />
-                            {meal && <button type="button" onClick={() => saveToLibrary(meal, "RESTAURANT")} className="text-gray-300 hover:text-green-600 p-1" title="Save to library"><Plus className="w-3 h-3" /></button>}
-                            <button onClick={() => removeMeal(day.id, mi)} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-3 h-3" /></button>
+                            {meal && <input value={day.mealNotes[mi] || ""} onChange={e => updateMealNote(day.id, mi, e.target.value)} placeholder="Note: e.g., great for lunch, rooftop view" className="text-xs text-gray-400 italic w-full border-0 border-b border-gray-100 ml-7 px-0 py-0.5 focus:outline-none focus:border-gray-300 bg-transparent" />}
                           </div>
                         ))}
                         <div className="flex gap-3 items-center">
@@ -557,14 +587,17 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
                       <Label className="text-xs text-gold-700 font-semibold mb-1.5 block flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Activities & Experiences</Label>
                       <div className="space-y-1.5">
                         {day.activities.map((act, ai) => (
-                          <div key={ai} className="flex items-center gap-1">
-                            <div className="flex flex-col shrink-0">
-                              <button onClick={() => moveItem(day.id, "activities", ai, -1)} disabled={ai === 0} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronUp className="w-3 h-3" /></button>
-                              <button onClick={() => moveItem(day.id, "activities", ai, 1)} disabled={ai === day.activities.length - 1} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronDown className="w-3 h-3" /></button>
+                          <div key={ai}>
+                            <div className="flex items-center gap-1">
+                              <div className="flex flex-col shrink-0">
+                                <button onClick={() => moveItem(day.id, "activities", ai, -1)} disabled={ai === 0} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronUp className="w-3 h-3" /></button>
+                                <button onClick={() => moveItem(day.id, "activities", ai, 1)} disabled={ai === day.activities.length - 1} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronDown className="w-3 h-3" /></button>
+                              </div>
+                              <Input value={act} onChange={e => updateActivity(day.id, ai, e.target.value)} placeholder="e.g., Private Colosseum tour" className="text-sm flex-1 bg-white" />
+                              {act && <button type="button" onClick={() => saveToLibrary(act, "EXPERIENCE")} className="text-gray-300 hover:text-green-600 p-1" title="Save to library"><Plus className="w-3 h-3" /></button>}
+                              <button onClick={() => removeActivity(day.id, ai)} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-3 h-3" /></button>
                             </div>
-                            <Input value={act} onChange={e => updateActivity(day.id, ai, e.target.value)} placeholder="e.g., Private Colosseum tour" className="text-sm flex-1 bg-white" />
-                            {act && <button type="button" onClick={() => saveToLibrary(act, "EXPERIENCE")} className="text-gray-300 hover:text-green-600 p-1" title="Save to library"><Plus className="w-3 h-3" /></button>}
-                            <button onClick={() => removeActivity(day.id, ai)} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-3 h-3" /></button>
+                            {act && <input value={day.activityNotes[ai] || ""} onChange={e => updateActivityNote(day.id, ai, e.target.value)} placeholder="Note: e.g., book in advance, 2hrs" className="text-xs text-gray-400 italic w-full border-0 border-b border-gray-100 ml-7 px-0 py-0.5 focus:outline-none focus:border-gray-300 bg-transparent" />}
                           </div>
                         ))}
                         <div className="flex gap-3 items-center">
@@ -580,6 +613,9 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
                     <div>
                       <Label className="text-xs text-gray-500 mb-1 block flex items-center gap-1"><Train className="w-3 h-3" /> Transport</Label>
                       <Input value={day.transportNotes} onChange={e => updateDay(day.id, "transportNotes", e.target.value)} placeholder="e.g., High-speed train from Rome, 2hrs" className="text-sm" />
+                      {day.transportNotes && (
+                        <input value={day.transportNote} onChange={e => updateDay(day.id, "transportNote", e.target.value)} placeholder="Note: e.g., private transfer, early morning" className="text-xs text-gray-400 italic w-full border-0 border-b border-gray-100 px-0 py-0.5 mt-1 focus:outline-none focus:border-gray-300 bg-transparent" />
+                      )}
                     </div>
                   </div>
                 </div>
