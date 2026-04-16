@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -57,6 +58,7 @@ interface PricingData {
   transfers: string
   total: string
   notes: string
+  showOnPortal: boolean
 }
 
 // ==================== HELPERS ====================
@@ -96,7 +98,12 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
   const [destinations, setDestinations] = useState(
     parseJson(version?.destinations, []).join(", ")
   )
-  const [notes, setNotes] = useState(version?.notes || "")
+  const [notes, setNotes] = useState(() => {
+    if (version?.notes) {
+      try { const p = JSON.parse(version.notes); return p.advisorNotes || "" } catch { return version.notes }
+    }
+    return ""
+  })
   const [status, setStatus] = useState(version?.status || "draft")
 
   // Days
@@ -135,10 +142,17 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
 
   // Pricing
   const [pricing, setPricing] = useState<PricingData>(() => {
-    if (version?.estimatedCost) {
-      return { flights: "", hotels: "", experiences: "", transfers: "", total: `$${version.estimatedCost.toLocaleString()}`, notes: "" }
+    // Try to load saved pricing from version notes
+    if (version?.notes) {
+      try {
+        const parsed = JSON.parse(version.notes)
+        if (parsed.pricing) return { ...parsed.pricing, showOnPortal: parsed.pricing.showOnPortal ?? false }
+      } catch {}
     }
-    return { flights: "", hotels: "", experiences: "", transfers: "", total: "", notes: "" }
+    if (version?.estimatedCost) {
+      return { flights: "", hotels: "", experiences: "", transfers: "", total: `$${version.estimatedCost.toLocaleString()}`, notes: "", showOnPortal: false }
+    }
+    return { flights: "", hotels: "", experiences: "", transfers: "", total: "", notes: "", showOnPortal: false }
   })
 
   // ==================== DAY OPERATIONS ====================
@@ -364,6 +378,10 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
         destinations: destArr,
         durationDays: days.length,
         estimatedCost: totalEstimate,
+        notes: JSON.stringify({
+          pricing: { flights: pricing.flights, hotels: pricing.hotels, experiences: pricing.experiences, transfers: pricing.transfers, total: pricing.total, notes: pricing.notes, showOnPortal: pricing.showOnPortal },
+          advisorNotes: notes,
+        }),
         itinerary: days.map((d, i) => ({
           day: i + 1,
           title: d.title,
@@ -386,7 +404,6 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
         experiences: experiences.filter(e => e.name).map(e => ({
           name: e.name, description: e.description, emoji: e.emoji,
         })),
-        notes,
         status,
       }
 
@@ -745,7 +762,21 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
           {/* PRICING TAB */}
           {activeTab === "pricing" && (
             <div className="space-y-5">
-              <p className="text-sm text-gray-500">Rough estimate ranges for this trip. These appear in the proposal and client portal.</p>
+              {/* Visibility toggle */}
+              <div className="flex items-center justify-between bg-sand-50 rounded-xl p-4 border border-sand-200">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">Client Portal Visibility</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {pricing.showOnPortal ? "Pricing will be visible to your client on their trip portal" : "Pricing is internal only — your client will not see it"}
+                  </p>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Switch checked={pricing.showOnPortal} onCheckedChange={v => setPricing(p => ({ ...p, showOnPortal: v }))} />
+                  <span className="text-sm text-gray-600">{pricing.showOnPortal ? "Visible" : "Internal"}</span>
+                </label>
+              </div>
+
+              <p className="text-xs text-gray-400">Rough estimate ranges for internal planning{pricing.showOnPortal ? " and client reference" : ""}.</p>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-700 mb-1.5 block">Flights Estimate</Label>

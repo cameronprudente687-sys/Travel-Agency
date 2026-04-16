@@ -53,6 +53,12 @@ export default async function MyTripPage() {
   const highlights = parseJsonField<string[]>(portal.tripHighlights, [])
   const inclusions = parseJsonField<string[]>(portal.proposal?.inclusions || "[]", [])
 
+  // Check if pricing should be visible to customer
+  let showPricing = false
+  if (version?.notes) {
+    try { const parsed = JSON.parse(version.notes); showPricing = parsed.pricing?.showOnPortal ?? false } catch {}
+  }
+
   const totalItems = portal.checklistItems.length
   const completedItems = portal.checklistItems.filter(i => i.completions.length > 0 && i.completions[0].completed).length
   const progressPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0
@@ -78,7 +84,7 @@ export default async function MyTripPage() {
           {version && (
             <div className="flex items-center justify-center gap-6 text-sm text-primary-300">
               <span className="flex items-center gap-1"><Calendar className="w-4 h-4" />{version.durationDays} days</span>
-              {version.estimatedCost && <span>Est. {formatCurrency(version.estimatedCost)}</span>}
+              {showPricing && version.estimatedCost && <span>Est. {formatCurrency(version.estimatedCost)}</span>}
             </div>
           )}
         </div>
@@ -287,7 +293,7 @@ export default async function MyTripPage() {
                     <div className="text-xs text-primary-500 mb-1">Destinations</div>
                     <div className="text-lg font-bold text-primary-800">{destinations.length}</div>
                   </div>
-                  {version.estimatedCost && (
+                  {showPricing && version.estimatedCost && (
                     <div className="bg-primary-50 rounded-xl p-4 text-center">
                       <div className="text-xs text-primary-500 mb-1">Estimate</div>
                       <div className="text-lg font-bold text-primary-800">{formatCurrency(version.estimatedCost)}</div>
