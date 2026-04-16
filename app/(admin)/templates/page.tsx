@@ -37,7 +37,7 @@ export default async function TemplatesPage({ searchParams }: Props) {
 
   return (
     <div className="flex flex-col min-h-full">
-      <AdminHeader title="Template Library" subtitle={`${templates.length} itinerary templates`} />
+      <AdminHeader title="Trip Library" subtitle={`${templates.length} reusable itineraries — build new trips or use these as starting points`} />
 
       <div className="flex-1 p-6">
         {/* Collections + search + create */}
@@ -47,7 +47,7 @@ export default async function TemplatesPage({ searchParams }: Props) {
             <Suspense>
               <SearchBar basePath="/templates" placeholder="Search templates..." />
             </Suspense>
-            <ItineraryBuilder mode="template" trigger={<Button variant="navy"><Plus className="w-4 h-4 mr-1" /> Build New Template</Button>} />
+            <ItineraryBuilder mode="template" trigger={<Button variant="navy"><Plus className="w-4 h-4 mr-1" /> Build New Trip</Button>} />
           </div>
         </div>
 
@@ -98,7 +98,7 @@ export default async function TemplatesPage({ searchParams }: Props) {
             <p className="text-gray-500 font-medium mb-2">
               {searchQuery ? `No templates matching "${searchQuery}"` : "No templates yet"}
             </p>
-            <ItineraryBuilder mode="template" trigger={<Button variant="navy"><Plus className="w-4 h-4 mr-1" /> Build New Template</Button>} />
+            <ItineraryBuilder mode="template" trigger={<Button variant="navy"><Plus className="w-4 h-4 mr-1" /> Build New Trip</Button>} />
           </div>
         )}
       </div>

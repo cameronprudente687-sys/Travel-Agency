@@ -74,7 +74,7 @@ export function SaveAsTemplateDialog({ version, trigger }: Props) {
           budgetLevel: "FIVE_TO_10K", paceLevel: pace,
           isSignature, isBestSeller,
         })
-        toast.success("Template saved! Find it in your Template Library.")
+        toast.success("Saved to your Trip Library!")
         setOpen(false)
       } catch {
         toast.error("Failed to save template")
@@ -87,13 +87,13 @@ export function SaveAsTemplateDialog({ version, trigger }: Props) {
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" size="sm">
-            <Bookmark className="w-3.5 h-3.5 mr-1" /> Save as Template
+            <Bookmark className="w-3.5 h-3.5 mr-1" /> Save to Trip Library
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[88vh] overflow-hidden flex flex-col p-0">
         <DialogHeader className="px-6 pt-5 pb-0">
-          <DialogTitle className="text-xl font-serif">Save as Reusable Template</DialogTitle>
+          <DialogTitle className="text-xl font-serif">Save to Your Trip Library</DialogTitle>
           <p className="text-sm text-gray-500 mt-1">Turn this itinerary into a trip starter you can reuse for future clients.</p>
         </DialogHeader>
 
@@ -218,7 +218,7 @@ export function SaveAsTemplateDialog({ version, trigger }: Props) {
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="navy" onClick={handleSave} disabled={isPending} className="min-w-[160px]">
-              {isPending ? "Saving..." : "Save as Template"}
+              {isPending ? "Saving..." : "Save to Trip Library"}
             </Button>
           </div>
         </div>

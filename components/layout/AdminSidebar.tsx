@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
-  Compass, LayoutDashboard, Users, Map, Star,
+  Compass, LayoutDashboard, Users, Map,
   MapPin, Settings, BookOpen,
   LogOut
 } from "lucide-react"
@@ -14,7 +14,6 @@ const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Leads", href: "/leads", icon: Users },
   { label: "Templates", href: "/templates", icon: Map },
-  { label: "Past Trips", href: "/past-trips", icon: Star },
   { label: "Saved Places", href: "/places", icon: MapPin },
   { label: "Settings", href: "/settings", icon: Settings },
 ]

@@ -434,7 +434,7 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
           accommodation: d.accommodation,
           transportNotes: d.transports.filter(Boolean).join("; "),
         })))
-        toast.success("Template created! Find it in your Template Library.")
+        toast.success("Saved to your Trip Library!")
       } else if (isEdit) {
         await updateVersion(version.id, leadId!, input)
         toast.success("Itinerary updated")
@@ -480,7 +480,7 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
       <DialogContent className={`${survey ? "max-w-6xl" : "max-w-4xl"} max-h-[90vh] overflow-hidden flex flex-col p-0`}>
         <DialogHeader className="px-6 pt-5 pb-0">
           <DialogTitle className="text-xl font-serif">
-            {isTemplateMode ? "Build New Template" : isEdit ? "Edit Itinerary" : "Build New Itinerary"}
+            {isTemplateMode ? "Build New Trip" : isEdit ? "Edit Itinerary" : "Build New Itinerary"}
           </DialogTitle>
         </DialogHeader>
 
@@ -849,7 +849,7 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button variant="navy" onClick={handleSave} disabled={loading} className="min-w-[120px]">
-              {loading ? "Saving..." : isTemplateMode ? "Save Template" : isEdit ? "Save Itinerary" : "Create Itinerary"}
+              {loading ? "Saving..." : isTemplateMode ? "Save to Library" : isEdit ? "Save Itinerary" : "Create Itinerary"}
             </Button>
           </div>
         </div>
