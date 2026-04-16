@@ -16,6 +16,7 @@ import { createVersion, updateVersion } from "@/actions/versions"
 import { toast } from "sonner"
 import { PlacePicker } from "./PlacePicker"
 import { SurveyPanel } from "./SurveyPanel"
+import { saveCustomPlaceToLibrary } from "@/actions/save-to-library"
 
 // ==================== TYPES ====================
 
@@ -180,6 +181,17 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
     setDays(prev => prev.map(d => d.id === dayId ? { ...d, meals: d.meals.filter((_, i) => i !== idx) } : d))
   }
 
+  const moveItem = (dayId: string, field: "activities" | "meals", idx: number, dir: -1 | 1) => {
+    setDays(prev => prev.map(d => {
+      if (d.id !== dayId) return d
+      const arr = [...d[field]]
+      const target = idx + dir
+      if (target < 0 || target >= arr.length) return d
+      ;[arr[idx], arr[target]] = [arr[target], arr[idx]]
+      return { ...d, [field]: arr }
+    }))
+  }
+
   // ==================== HOTEL OPERATIONS ====================
 
   const addHotel = () => {
@@ -249,6 +261,24 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
         ? { ...d, activities: [...d.activities, place.name] }
         : d))
       toast.success(`Added ${place.name} to Day ${days.findIndex(d => d.id === dayId) + 1}`)
+    }
+  }
+
+  // ==================== SAVE TO LIBRARY ====================
+
+  const saveToLibrary = async (name: string, category: string) => {
+    if (!name.trim()) return
+    const dest = destinations.split(",")[0]?.trim() || "Unknown"
+    try {
+      await saveCustomPlaceToLibrary({
+        name: name.trim(),
+        destination: dest,
+        country: "",
+        category,
+      })
+      toast.success(`Saved "${name}" to your library`)
+    } catch {
+      toast.error("Failed to save")
     }
   }
 
@@ -332,11 +362,16 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
 
   // ==================== TAB CONFIG ====================
 
+  // Count all items including day-level ones
+  const totalHotels = hotels.length + days.filter(d => d.accommodation).length
+  const totalMeals = days.reduce((sum, d) => sum + d.meals.filter(Boolean).length, 0)
+  const totalExperiences = experiences.length + days.reduce((sum, d) => sum + d.activities.filter(Boolean).length, 0)
+
   const tabs = [
     { key: "overview" as const, label: "Trip Overview", icon: FileText },
     { key: "days" as const, label: `Days (${days.length})`, icon: Calendar },
-    { key: "hotels" as const, label: `Hotels (${hotels.length})`, icon: Hotel },
-    { key: "experiences" as const, label: `Experiences (${experiences.length})`, icon: Sparkles },
+    { key: "hotels" as const, label: `Hotels (${totalHotels})`, icon: Hotel },
+    { key: "experiences" as const, label: `Experiences (${totalExperiences})`, icon: Sparkles },
     { key: "pricing" as const, label: "Pricing", icon: MapPin },
   ]
 
@@ -481,9 +516,16 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
                     <div className="bg-primary-50/50 rounded-lg p-3 border border-primary-100">
                       <Label className="text-xs text-primary-700 font-semibold mb-1.5 block flex items-center gap-1"><Hotel className="w-3.5 h-3.5" /> Where to Stay</Label>
                       <Input value={day.accommodation} onChange={e => updateDay(day.id, "accommodation", e.target.value)} placeholder="Type a hotel name or use 'From Saved' below" className="text-sm mb-2" />
-                      <PlacePicker mode="hotel" onSelect={(p) => insertPlaceIntoDay(day.id, p)} trigger={
-                        <button type="button" className="text-xs text-primary-600 hover:text-primary-800 flex items-center gap-1"><Hotel className="w-3 h-3" /> From saved hotels</button>
-                      } />
+                      <div className="flex gap-3 items-center">
+                        <PlacePicker mode="hotel" onSelect={(p) => insertPlaceIntoDay(day.id, p)} trigger={
+                          <button type="button" className="text-xs text-primary-600 hover:text-primary-800 flex items-center gap-1"><Hotel className="w-3 h-3" /> From saved</button>
+                        } />
+                        {day.accommodation && (
+                          <button type="button" onClick={() => saveToLibrary(day.accommodation, "HOTEL")} className="text-xs text-gray-400 hover:text-green-600 flex items-center gap-1">
+                            <Plus className="w-3 h-3" /> Save to library
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     {/* RESTAURANTS — clear dedicated section */}
@@ -491,8 +533,13 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
                       <Label className="text-xs text-amber-700 font-semibold mb-1.5 block flex items-center gap-1"><Utensils className="w-3.5 h-3.5" /> Where to Eat</Label>
                       <div className="space-y-1.5">
                         {day.meals.map((meal, mi) => (
-                          <div key={mi} className="flex items-center gap-2">
+                          <div key={mi} className="flex items-center gap-1">
+                            <div className="flex flex-col shrink-0">
+                              <button onClick={() => moveItem(day.id, "meals", mi, -1)} disabled={mi === 0} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronUp className="w-3 h-3" /></button>
+                              <button onClick={() => moveItem(day.id, "meals", mi, 1)} disabled={mi === day.meals.length - 1} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronDown className="w-3 h-3" /></button>
+                            </div>
                             <Input value={meal} onChange={e => updateMeal(day.id, mi, e.target.value)} placeholder="e.g., Da Enzo al 29" className="text-sm flex-1 bg-white" />
+                            {meal && <button type="button" onClick={() => saveToLibrary(meal, "RESTAURANT")} className="text-gray-300 hover:text-green-600 p-1" title="Save to library"><Plus className="w-3 h-3" /></button>}
                             <button onClick={() => removeMeal(day.id, mi)} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-3 h-3" /></button>
                           </div>
                         ))}
@@ -510,8 +557,13 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
                       <Label className="text-xs text-gold-700 font-semibold mb-1.5 block flex items-center gap-1"><Sparkles className="w-3.5 h-3.5" /> Activities & Experiences</Label>
                       <div className="space-y-1.5">
                         {day.activities.map((act, ai) => (
-                          <div key={ai} className="flex items-center gap-2">
+                          <div key={ai} className="flex items-center gap-1">
+                            <div className="flex flex-col shrink-0">
+                              <button onClick={() => moveItem(day.id, "activities", ai, -1)} disabled={ai === 0} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronUp className="w-3 h-3" /></button>
+                              <button onClick={() => moveItem(day.id, "activities", ai, 1)} disabled={ai === day.activities.length - 1} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronDown className="w-3 h-3" /></button>
+                            </div>
                             <Input value={act} onChange={e => updateActivity(day.id, ai, e.target.value)} placeholder="e.g., Private Colosseum tour" className="text-sm flex-1 bg-white" />
+                            {act && <button type="button" onClick={() => saveToLibrary(act, "EXPERIENCE")} className="text-gray-300 hover:text-green-600 p-1" title="Save to library"><Plus className="w-3 h-3" /></button>}
                             <button onClick={() => removeActivity(day.id, ai)} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-3 h-3" /></button>
                           </div>
                         ))}
