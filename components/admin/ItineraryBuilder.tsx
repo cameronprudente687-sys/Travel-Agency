@@ -31,8 +31,8 @@ interface DayItem {
   activityNotes: string[]
   meals: string[]
   mealNotes: string[]
-  transportNotes: string
-  transportNote: string
+  transports: string[]
+  transportNotes: string[]
 }
 
 interface HotelItem {
@@ -65,7 +65,7 @@ let counter = 0
 const uid = () => `item_${Date.now()}_${counter++}`
 
 function emptyDay(dayNum: number): DayItem {
-  return { id: uid(), title: `Day ${dayNum}`, location: "", description: "", accommodation: "", accommodationNote: "", activities: [], activityNotes: [], meals: [], mealNotes: [], transportNotes: "", transportNote: "" }
+  return { id: uid(), title: `Day ${dayNum}`, location: "", description: "", accommodation: "", accommodationNote: "", activities: [], activityNotes: [], meals: [], mealNotes: [], transports: [], transportNotes: [] }
 }
 
 function parseJson(val: any, fb: any) {
@@ -114,8 +114,8 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
         activityNotes: Array.isArray(d.activityNotes) ? d.activityNotes : parseJson(d.activityNotes, []),
         meals: Array.isArray(d.meals) ? d.meals : parseJson(d.meals, []),
         mealNotes: Array.isArray(d.mealNotes) ? d.mealNotes : parseJson(d.mealNotes, []),
-        transportNotes: d.transportNotes || "",
-        transportNote: d.transportNote || "",
+        transports: Array.isArray(d.transports) ? d.transports : (d.transportNotes ? [d.transportNotes] : []),
+        transportNotes: Array.isArray(d.transportNotes) && Array.isArray(d.transports) ? d.transportNotes : (d.transportNote ? [d.transportNote] : []),
       }))
     }
     return [emptyDay(1)]
@@ -197,14 +197,33 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
     setDays(prev => prev.map(d => d.id === dayId ? { ...d, meals: d.meals.filter((_, i) => i !== idx), mealNotes: d.mealNotes.filter((_, i) => i !== idx) } : d))
   }
 
-  const moveItem = (dayId: string, field: "activities" | "meals", idx: number, dir: -1 | 1) => {
+  const addTransport = (dayId: string) => {
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, transports: [...d.transports, ""], transportNotes: [...d.transportNotes, ""] } : d))
+  }
+
+  const updateTransport = (dayId: string, idx: number, value: string) => {
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, transports: d.transports.map((t, i) => i === idx ? value : t) } : d))
+  }
+
+  const updateTransportNote = (dayId: string, idx: number, value: string) => {
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, transportNotes: d.transportNotes.map((n, i) => i === idx ? value : n) } : d))
+  }
+
+  const removeTransport = (dayId: string, idx: number) => {
+    setDays(prev => prev.map(d => d.id === dayId ? { ...d, transports: d.transports.filter((_, i) => i !== idx), transportNotes: d.transportNotes.filter((_, i) => i !== idx) } : d))
+  }
+
+  const moveItem = (dayId: string, field: "activities" | "meals" | "transports", idx: number, dir: -1 | 1) => {
+    const notesField = field === "activities" ? "activityNotes" : field === "meals" ? "mealNotes" : "transportNotes"
     setDays(prev => prev.map(d => {
       if (d.id !== dayId) return d
       const arr = [...d[field]]
+      const notes = [...(d as any)[notesField]]
       const target = idx + dir
       if (target < 0 || target >= arr.length) return d
       ;[arr[idx], arr[target]] = [arr[target], arr[idx]]
-      return { ...d, [field]: arr }
+      ;[notes[idx], notes[target]] = [notes[target], notes[idx]]
+      return { ...d, [field]: arr, [notesField]: notes }
     }))
   }
 
@@ -318,8 +337,8 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
         activityNotes: [],
         meals: parseJson(d.meals, []),
         mealNotes: [],
-        transportNotes: d.transportNotes || "",
-        transportNote: "",
+        transports: d.transportNotes ? [d.transportNotes] : [],
+        transportNotes: [],
       })))
     }
 
@@ -356,8 +375,10 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
           activityNotes: d.activityNotes.filter((_, idx) => d.activities[idx]),
           meals: d.meals.filter(Boolean),
           mealNotes: d.mealNotes.filter((_, idx) => d.meals[idx]),
-          transportNotes: d.transportNotes,
-          transportNote: d.transportNote || undefined,
+          transports: d.transports.filter(Boolean),
+          transportNotes: d.transportNotes.filter((_, idx) => d.transports[idx]),
+          // Legacy compat: also save first transport as transportNotes string
+          ...(d.transports[0] ? { transportNotesLegacy: d.transports[0] } : {}),
         })),
         hotelIdeas: hotels.filter(h => h.name).map(h => ({
           name: h.name, location: h.location, description: h.description, whyRecommended: h.whyRecommended,
@@ -609,13 +630,25 @@ export function ItineraryBuilder({ leadId, version, templates = [], trigger, sur
                       </div>
                     </div>
 
-                    {/* Transport */}
-                    <div>
-                      <Label className="text-xs text-gray-500 mb-1 block flex items-center gap-1"><Train className="w-3 h-3" /> Transport</Label>
-                      <Input value={day.transportNotes} onChange={e => updateDay(day.id, "transportNotes", e.target.value)} placeholder="e.g., High-speed train from Rome, 2hrs" className="text-sm" />
-                      {day.transportNotes && (
-                        <input value={day.transportNote} onChange={e => updateDay(day.id, "transportNote", e.target.value)} placeholder="Note: e.g., private transfer, early morning" className="text-xs text-gray-400 italic w-full border-0 border-b border-gray-100 px-0 py-0.5 mt-1 focus:outline-none focus:border-gray-300 bg-transparent" />
-                      )}
+                    {/* Transport — multiple items */}
+                    <div className="bg-gray-50/50 rounded-lg p-3 border border-gray-100">
+                      <Label className="text-xs text-gray-600 font-semibold mb-1.5 block flex items-center gap-1"><Train className="w-3.5 h-3.5" /> Transportation</Label>
+                      <div className="space-y-1.5">
+                        {day.transports.map((tr, ti) => (
+                          <div key={ti}>
+                            <div className="flex items-center gap-1">
+                              <div className="flex flex-col shrink-0">
+                                <button onClick={() => moveItem(day.id, "transports", ti, -1)} disabled={ti === 0} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronUp className="w-3 h-3" /></button>
+                                <button onClick={() => moveItem(day.id, "transports", ti, 1)} disabled={ti === day.transports.length - 1} className="text-gray-300 hover:text-gray-500 disabled:opacity-0 p-0.5"><ChevronDown className="w-3 h-3" /></button>
+                              </div>
+                              <Input value={tr} onChange={e => updateTransport(day.id, ti, e.target.value)} placeholder="e.g., Private transfer to airport" className="text-sm flex-1 bg-white" />
+                              <button onClick={() => removeTransport(day.id, ti)} className="text-red-400 hover:text-red-600 p-1"><Trash2 className="w-3 h-3" /></button>
+                            </div>
+                            {tr && <input value={day.transportNotes[ti] || ""} onChange={e => updateTransportNote(day.id, ti, e.target.value)} placeholder="Note: e.g., leave at 2:30 PM, 45 min" className="text-xs text-gray-400 italic w-full border-0 border-b border-gray-100 ml-7 px-0 py-0.5 focus:outline-none focus:border-gray-300 bg-transparent" />}
+                          </div>
+                        ))}
+                        <button onClick={() => addTransport(day.id)} className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 py-1"><Plus className="w-3 h-3" /> Add transport</button>
+                      </div>
                     </div>
                   </div>
                 </div>
