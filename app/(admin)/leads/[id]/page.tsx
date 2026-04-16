@@ -106,9 +106,6 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
           {survey?.travelerType && (
             <span className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" />{survey.travelerType.replace(/_/g, " ")} · {survey.groupSize || 2}</span>
           )}
-          {survey?.budget && (
-            <span className="flex items-center gap-1.5"><DollarSign className="w-3.5 h-3.5" />{survey.budget.replace(/_/g, " ")}</span>
-          )}
           {survey?.tripDurationMin && (
             <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{survey.tripDurationMin}–{survey.tripDurationMax} days</span>
           )}
@@ -181,7 +178,6 @@ export default async function LeadDetailPage({ params }: { params: { id: string 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {[
                       { label: "Duration", value: survey?.tripDurationMin && survey?.tripDurationMax ? `${survey.tripDurationMin}–${survey.tripDurationMax} days` : null, icon: Calendar },
-                      { label: "Budget", value: survey?.budget?.replace(/_/g, " "), icon: DollarSign },
                       { label: "Pace", value: survey?.pacePreference, icon: Clock },
                       { label: "Dining", value: survey?.diningStyle, icon: Star },
                       { label: "Planning", value: survey?.planningInvolvement?.replace(/_/g, " "), icon: Users },

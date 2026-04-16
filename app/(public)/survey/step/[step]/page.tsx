@@ -43,19 +43,30 @@ const TRAVELER_TYPES = [
 ]
 
 const INTERESTS = [
-  "History & Architecture", "Art & Museums", "Food & Wine", "Nature & Wildlife",
-  "Photography", "Beaches & Water", "Hiking & Trekking", "Wellness & Spas",
-  "Nightlife", "Local Markets", "Cooking Classes", "Sailing & Boating",
-  "Skiing & Snow Sports", "Safari", "Cycling", "Shopping",
+  { value: "Culture & History", emoji: "🏛️" },
+  { value: "Art & Museums", emoji: "🎨" },
+  { value: "Food & Wine", emoji: "🍷" },
+  { value: "Nature & Scenery", emoji: "🌿" },
+  { value: "Beach & Relaxation", emoji: "🏖️" },
+  { value: "Wellness & Spa", emoji: "🧘" },
+  { value: "Adventure & Outdoors", emoji: "🏔️" },
+  { value: "Shopping", emoji: "🛍️" },
+  { value: "Nightlife", emoji: "🌙" },
+  { value: "Photography", emoji: "📷" },
+  { value: "Local Experiences", emoji: "🏘️" },
+  { value: "Hidden Gems", emoji: "💎" },
+  { value: "Romance", emoji: "💕" },
+  { value: "Family Activities", emoji: "👨‍👩‍👧" },
 ]
 
 const ACCOMMODATION_TYPES = [
-  { value: "LUXURY_HOTEL", label: "Luxury Hotels", emoji: "🏨" },
+  { value: "LUXURY_HOTEL", label: "Luxury Hotels", emoji: "✨" },
   { value: "BOUTIQUE", label: "Boutique Properties", emoji: "🏡" },
+  { value: "REFINED_COMFORT", label: "Refined Comfort Hotels", emoji: "🏨" },
   { value: "VILLA", label: "Private Villas", emoji: "🏰" },
   { value: "RESORT", label: "All-Inclusive Resorts", emoji: "🌴" },
   { value: "DESIGN_HOTEL", label: "Design Hotels", emoji: "🎨" },
-  { value: "HISTORIC", label: "Historic/Palace Hotels", emoji: "🏯" },
+  { value: "HISTORIC", label: "Historic / Palace Hotels", emoji: "🏯" },
 ]
 
 function MultiSelect({
@@ -284,20 +295,6 @@ export default function SurveyStepPage() {
                 })}
               </div>
             </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-700 mb-3 block">Budget range (total for group)</Label>
-              <SingleSelect
-                options={[
-                  { value: "UNDER_3K", label: "Under $3,000", emoji: "💵" },
-                  { value: "THREE_TO_5K", label: "$3,000 – $5,000", emoji: "💰" },
-                  { value: "FIVE_TO_10K", label: "$5,000 – $10,000", emoji: "💎" },
-                  { value: "TEN_TO_20K", label: "$10,000 – $20,000", emoji: "✨" },
-                  { value: "OVER_20K", label: "Over $20,000", emoji: "👑" },
-                ]}
-                value={data.budget || ''}
-                onChange={(v) => updateField('budget', v)}
-              />
-            </div>
           </div>
         )
 
@@ -400,27 +397,56 @@ export default function SurveyStepPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {INTERESTS.map(interest => {
                 const interests = data.interests || []
-                const selected = interests.includes(interest)
+                const selected = interests.includes(interest.value)
                 return (
                   <button
-                    key={interest}
+                    key={interest.value}
                     type="button"
                     onClick={() => {
-                      if (selected) updateField('interests', interests.filter((i: string) => i !== interest))
-                      else updateField('interests', [...interests, interest])
+                      if (selected) updateField('interests', interests.filter((i: string) => i !== interest.value))
+                      else updateField('interests', [...interests, interest.value])
                     }}
                     className={cn(
-                      "py-2 px-3 rounded-lg text-sm border text-left transition-all",
+                      "flex items-center gap-2 py-3 px-3 rounded-xl border-2 text-left transition-all",
                       selected
                         ? "border-primary-600 bg-primary-50 text-primary-800 font-medium"
-                        : "border-gray-200 text-gray-600 hover:border-gray-300"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                     )}
                   >
-                    {interest}
+                    <span className="text-lg">{interest.emoji}</span>
+                    <span className="text-sm">{interest.value}</span>
                   </button>
                 )
               })}
+              {/* Other option */}
+              <button
+                type="button"
+                onClick={() => {
+                  const interests = data.interests || []
+                  if (!interests.includes('Other')) updateField('interests', [...interests, 'Other'])
+                }}
+                className={cn(
+                  "flex items-center gap-2 py-3 px-3 rounded-xl border-2 text-left transition-all",
+                  (data.interests || []).includes('Other')
+                    ? "border-primary-600 bg-primary-50 text-primary-800 font-medium"
+                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                )}
+              >
+                <span className="text-lg">✏️</span>
+                <span className="text-sm">Other</span>
+              </button>
             </div>
+            {(data.interests || []).includes('Other') && (
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-1 block">What else interests you?</Label>
+                <Input
+                  value={data.otherInterests || ''}
+                  onChange={e => updateField('otherInterests', e.target.value)}
+                  placeholder="Tell us what you're interested in..."
+                  className="text-base"
+                />
+              </div>
+            )}
             <div>
               <Label className="text-sm font-medium text-gray-700 mb-2 block">Any must-have experiences?</Label>
               <Textarea
@@ -486,11 +512,22 @@ export default function SurveyStepPage() {
                   { value: "halal", label: "Halal", emoji: "☪️" },
                   { value: "kosher", label: "Kosher", emoji: "✡️" },
                   { value: "gluten_free", label: "Gluten-free", emoji: "🌾" },
+                  { value: "other_diet", label: "Other", emoji: "✏️" },
                   { value: "none", label: "No restrictions", emoji: "✅" },
                 ]}
                 value={data.dietaryRestrictions || []}
                 onChange={v => updateField('dietaryRestrictions', v)}
               />
+              {(data.dietaryRestrictions || []).includes('other_diet') && (
+                <div className="mt-2">
+                  <Input
+                    value={data.otherDietaryNote || ''}
+                    onChange={e => updateField('otherDietaryNote', e.target.value)}
+                    placeholder="Please describe your dietary needs..."
+                    className="text-base"
+                  />
+                </div>
+              )}
             </div>
           </div>
         )
