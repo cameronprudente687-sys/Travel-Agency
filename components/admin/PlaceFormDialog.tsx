@@ -84,9 +84,18 @@ export function PlaceFormDialog({ place, trigger }: Props) {
   const [tags, setTags] = useState<string[]>(parseJsonArray(place?.tags))
   const [note, setNote] = useState(place?.whyWeRecommend || "")
   const [isTopPick, setIsTopPick] = useState(place?.isTopPick || false)
+  const [customTag, setCustomTag] = useState("")
 
   const toggleTag = (tag: string) => {
     setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+  }
+
+  const addCustomTag = () => {
+    const t = customTag.trim()
+    if (t && !tags.includes(t)) {
+      setTags(prev => [...prev, t])
+      setCustomTag("")
+    }
   }
 
   const selectCategoryGroup = (group: string) => {
@@ -198,8 +207,8 @@ export function PlaceFormDialog({ place, trigger }: Props) {
             </div>
           </div>
 
-          {/* Step 3: Quick tags — category-specific */}
-          {availableTags.length > 0 && (
+          {/* Step 3: Quick tags — category-specific + custom */}
+          {(availableTags.length > 0 || categoryGroup) && (
             <div>
               <Label className="text-sm font-medium text-gray-900 mb-2 block">Quick Tags</Label>
               <div className="flex flex-wrap gap-1.5">
@@ -213,6 +222,26 @@ export function PlaceFormDialog({ place, trigger }: Props) {
                     {tag}
                   </button>
                 ))}
+                {/* Custom tags that aren't in presets */}
+                {tags.filter(t => !availableTags.includes(t)).map(tag => (
+                  <button key={tag} type="button" onClick={() => toggleTag(tag)}
+                    className="text-sm rounded-full px-3.5 py-1.5 font-medium bg-gold-500 text-white shadow-sm">
+                    {tag}
+                  </button>
+                ))}
+              </div>
+              {/* Custom tag input */}
+              <div className="flex items-center gap-2 mt-2">
+                <Input
+                  value={customTag}
+                  onChange={e => setCustomTag(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCustomTag() } }}
+                  placeholder="Type a custom tag..."
+                  className="text-sm h-8 flex-1"
+                />
+                <Button type="button" variant="outline" size="sm" onClick={addCustomTag} disabled={!customTag.trim()} className="h-8 text-xs px-3">
+                  Add
+                </Button>
               </div>
             </div>
           )}
